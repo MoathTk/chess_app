@@ -33,8 +33,6 @@ class PieceCube extends ConsumerWidget {
     const Color lightSquare = Color.fromARGB(172, 255, 248, 220);
 
     const Color darkSquare = Color.fromARGB(255, 121, 102, 84);
-    const Color prevous = Color.fromARGB(103, 180, 85, 48);
-    const Color prevousOrNext = Color.fromARGB(192, 180, 85, 48);
     int highlightedPosition = gameState.placesToMove.contains(pieceIndex)
         ? 1
         : gameState.placesToKill.contains(pieceIndex)
@@ -69,7 +67,9 @@ class PieceCube extends ConsumerWidget {
               duration: const Duration(milliseconds: 200),
               decoration: BoxDecoration(
                 color: (isPrvoius || isNext)
-                    ? prevousOrNext
+                    ? isWhite
+                          ? const Color.fromARGB(170, 240, 220, 140)
+                          : const Color.fromARGB(190, 200, 160, 70)
                     : isWhite
                     ? lightSquare
                     : darkSquare,
@@ -93,7 +93,7 @@ class PieceCube extends ConsumerWidget {
             ),
           ),
         ),
-        if (highlightedPosition == 1)
+        if (highlightedPosition == 1 || highlightedPosition == 2)
           IgnorePointer(
             child: Center(
               child: FractionallySizedBox(
@@ -108,19 +108,6 @@ class PieceCube extends ConsumerWidget {
                     shape: BoxShape.circle,
                   ),
                 ),
-              ),
-            ),
-          ),
-        if (highlightedPosition == 2)
-          IgnorePointer(
-            child: AnimatedContainer(
-              height: double.infinity,
-              width: double.infinity,
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: const Color.fromARGB(131, 244, 67, 54),
-                //border: Border.all(width: 1.0),
-                //hape: BoxShape.circle,
               ),
             ),
           ),
