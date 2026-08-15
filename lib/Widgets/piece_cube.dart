@@ -96,14 +96,17 @@ class PieceCube extends ConsumerWidget {
         if (highlightedPosition == 1)
           IgnorePointer(
             child: Center(
-              child: AnimatedContainer(
-                height: 8,
-                width: 8,
-                duration: const Duration(milliseconds: 200),
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 160, 255, 178),
-                  border: Border.all(width: 1.0),
-                  shape: BoxShape.circle,
+              child: FractionallySizedBox(
+                widthFactor: 0.3,
+                heightFactor: 0.3,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  decoration: BoxDecoration(
+                    color: isWhite
+                        ? const Color.fromARGB(128, 82, 131, 102)
+                        : const Color.fromRGBO(190, 240, 200, 0.55),
+                    shape: BoxShape.circle,
+                  ),
                 ),
               ),
             ),
