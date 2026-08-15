@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:chess_app_v1/Providers/board_provider.dart';
 import 'package:chess_app_v1/Models/player.dart';
-import 'package:material_design_icons_flutter/material_design_icons_flutter.dart';
+import 'package:flutter_material_design_icons/flutter_material_design_icons.dart';
 
 class KilledPieceRetreiveWidget extends ConsumerWidget {
   const KilledPieceRetreiveWidget({
