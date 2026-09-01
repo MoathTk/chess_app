@@ -4,8 +4,8 @@ import 'package:chess_app_v1/Models/solider.dart';
 import 'package:chess_app_v1/Validations/positions_validations.dart';
 
 class Board {
-  List<Solider> _chessBoard = List.filled(64, Solider.getEmptyInstance());
-  List<Solider> _killSoldiers = [];
+  final List<Solider> _chessBoard = List.filled(64, Solider.getEmptyInstance());
+  final List<Solider> _killSoldiers = [];
   int player1KingPosition = -2;
   int player2kingPosition = -2;
 
@@ -16,7 +16,7 @@ class Board {
   }
 
   Board clone() {
-    return Board(game: this.game.clone());
+    return Board(game: game.clone());
   }
 
   Board({required this.game}) {
@@ -114,7 +114,6 @@ class Board {
 
   void _fillPlayerOneAndPlayerTwoKingAndQueen(Player player1, Player player2) {
     if (_chessBoard.isNotEmpty) {
-     
       if (PositionsValidations.validSoldierPosiiton(
         player1.king.soliderposition,
       )) {

@@ -93,8 +93,6 @@ class PromotionDialog extends ConsumerWidget {
       onTap: () async {
         // 1. Update the piece in the database/provider
         await gameBoard.promotePawnInDatabase(type);
-
-        
       },
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -104,7 +102,7 @@ class PromotionDialog extends ConsumerWidget {
           border: Border.all(color: Colors.white10),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.4),
+              color: Colors.black.withValues(alpha: 0.4),
               blurRadius: 10,
               offset: const Offset(0, 5),
             ),

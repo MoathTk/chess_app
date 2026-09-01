@@ -80,16 +80,7 @@ class PieceCube extends ConsumerWidget {
                   width: 2.0,
                 ),
               ),
-              child: Container(
-                // decoration: BoxDecoration(
-                //   gradient: RadialGradient(
-                //     center: const Alignment(-0.8, -0.8),
-                //     radius: 1.0,
-                //     colors: [Colors.white.withOpacity(0.3), Colors.transparent],
-                //   ),
-                // ),
-                child: Center(child: iconToDisplay),
-              ),
+              child: Center(child: iconToDisplay),
             ),
           ),
         ),

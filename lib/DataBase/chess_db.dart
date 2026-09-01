@@ -259,7 +259,7 @@ class ChessDb {
             id: players[i]['ID'],
             playerTitle: players[i]['PlayerTitle']?.toString() ?? "Guest",
             king: king!,
-            queen: queen!,
+            queen: queen,
             color: int.parse(players[i]['Color'].toString()) == 1
                 ? ColorType.white
                 : ColorType.black,
@@ -269,7 +269,7 @@ class ChessDb {
             horses: allKinghts,
             bishops: allbishops,
             promotable: players[i]['Promotable'],
-            remainingTime: 0
+            remainingTime: 0,
           ),
         );
       }

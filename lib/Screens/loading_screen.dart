@@ -64,7 +64,7 @@ class _LoadingMatchScreenState extends State<LoadingMatchScreen>
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
-                      color: accentColor.withOpacity(0.2),
+                      color: accentColor.withValues(alpha: 0.2),
                       blurRadius: 20,
                       spreadRadius: 5,
                     ),

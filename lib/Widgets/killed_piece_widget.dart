@@ -39,7 +39,7 @@ class KilledPieceWidget extends ConsumerWidget {
     List<Solider> killedSoldiers = gameState.board.getPlayerkilledSoldiers(
       playerID,
     );
-    return Container(
+    return SizedBox(
       height: 50,
       width: double.infinity,
 
@@ -56,7 +56,7 @@ class KilledPieceWidget extends ConsumerWidget {
   }
 
   Widget _killedSoldierIcon(Solider killedSoldiers) {
-    return Container(
+    return SizedBox(
       height: 20,
       width: 15,
       child: setIcon(killedSoldiers.soliderType, isWhite),

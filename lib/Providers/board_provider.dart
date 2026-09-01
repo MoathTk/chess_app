@@ -42,7 +42,6 @@ class GameBoardState {
     List<int>? placesToKill,
     int? movedFromIndex,
     int? movedToIndex,
-  
   }) {
     return GameBoardState(
       board: board ?? this.board,
@@ -57,7 +56,7 @@ class GameBoardState {
 }
 
 class BoardNotifier extends StateNotifier<GameBoardState> {
-  BoardNotifier(GameBoardState gameboard) : super(gameboard);
+  BoardNotifier(super.gameboard);
 
   int hasToPromotePawn() {
     Game currentGame = state.board.game;
@@ -313,7 +312,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
               placesToKill: [],
               movedFromIndex: previous,
               movedToIndex: next,
-            );//Moath12-#4ieo#
+            ); //Moath12-#4ieo#
             //await AudioService.playRingBell();
             int checked = CheckLogic.isSoldierMayAttacksKings(
               movedSoldier.soliderposition,
@@ -324,7 +323,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
 
             if (checked == 1) {
               if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
-                updatedBoard.game.winner =  currentTurn ? 0 : 1;
+                updatedBoard.game.winner = currentTurn ? 0 : 1;
               }
               bool setted = await _setSoldierAsCheckerInDB(
                 movedSoldier.soliderID,

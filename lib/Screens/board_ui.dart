@@ -11,7 +11,7 @@ import 'package:chess_app_v1/Widgets/killed_piece_widget.dart';
 import 'package:chess_app_v1/Screens/endgame_screen.dart'; // Contains WinnerDialog
 
 class GameBoard extends ConsumerStatefulWidget {
-  GameBoard({
+  const GameBoard({
     super.key,
     required this.player1Name,
     required this.player2Name,
@@ -350,12 +350,12 @@ Widget _buildTurnBadge() {
   return Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     decoration: BoxDecoration(
-      color: Colors.greenAccent.withOpacity(0.15),
+      color: Colors.greenAccent.withValues(alpha: 0.15),
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.greenAccent.withOpacity(0.5)),
+      border: Border.all(color: Colors.greenAccent.withValues(alpha: 0.5)),
       boxShadow: [
         BoxShadow(
-          color: Colors.greenAccent.withOpacity(0.1),
+          color: Colors.greenAccent.withValues(alpha: 0.1),
           blurRadius: 4,
           spreadRadius: 1,
         ),
@@ -365,7 +365,7 @@ Widget _buildTurnBadge() {
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(Icons.circle, color: Colors.greenAccent, size: 8),
-        const SizedBox(width: 4),
+        SizedBox(width: 4),
         Text(
           "THINKING",
           style: TextStyle(
@@ -396,7 +396,7 @@ Widget _buildAvatar(Color color, bool isActiveTurn) {
       boxShadow: isActiveTurn
           ? [
               BoxShadow(
-                color: Colors.greenAccent.withOpacity(0.3),
+                color: Colors.greenAccent.withValues(alpha: 0.3),
                 blurRadius: 12,
                 spreadRadius: 2,
               ),

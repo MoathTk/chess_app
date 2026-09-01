@@ -112,7 +112,6 @@ class GameWidget extends StatelessWidget {
                 child: IconButton(
                   onPressed: () async {
                     // Inside your button's onPressed
-                    if (game == null) return;
                     Navigator.push(
                       context,
                       MaterialPageRoute(

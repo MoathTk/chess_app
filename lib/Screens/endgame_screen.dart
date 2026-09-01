@@ -34,10 +34,13 @@ class WinnerDialog extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF1A1A1A), // Matches your app's background
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: glowColor.withOpacity(0.5), width: 2),
+            border: Border.all(
+              color: glowColor.withValues(alpha: 0.5),
+              width: 2,
+            ),
             boxShadow: [
               BoxShadow(
-                color: glowColor.withOpacity(0.15),
+                color: glowColor.withValues(alpha: 0.15),
                 blurRadius: 30,
                 spreadRadius: 5,
               ),
@@ -55,7 +58,7 @@ class WinnerDialog extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: glowColor.withOpacity(0.1),
+                  color: glowColor.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(MdiIcons.crown, color: glowColor, size: 64),
@@ -159,7 +162,7 @@ class WinnerDialog extends StatelessWidget {
                         ), // Deep gaming green
                         padding: const EdgeInsets.symmetric(vertical: 16),
                         elevation: 4,
-                        shadowColor: Colors.greenAccent.withOpacity(0.5),
+                        shadowColor: Colors.greenAccent.withValues(alpha: 0.5),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

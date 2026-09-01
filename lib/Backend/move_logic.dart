@@ -9,7 +9,6 @@ class MoveLogic {
     bool turn,
     int position,
   ) {
-    
     List<int> location = [];
     // location.add(position);
     int currentPwanLocation = position;
@@ -17,9 +16,6 @@ class MoveLogic {
       bool hurdle = false;
       if (!PositionsValidations.isSoldierOnTop(currentPwanLocation, turn)) {
         if (turn) {
-          if (PositionsValidations.onBottom(position)) {
-            return [-2];
-          }
           if (firstMove) {
             if (board
                     .getChessBoardList()[currentPwanLocation + 8]
@@ -48,9 +44,6 @@ class MoveLogic {
             }
           }
         } else {
-          if (PositionsValidations.onTop(position)) {
-            return [-2];
-          }
           if (firstMove) {
             if (board
                     .getChessBoardList()[currentPwanLocation - 8]
@@ -238,7 +231,7 @@ class MoveLogic {
     return placesToMove;
   }
 
-  static List<int> _getAllBishopPlaceToMoveDownLeft(
+  static List<int> _getAllBishopPlaceToMoveDownRight(
     int currentBishopPosition,
     List<Solider> allSoldiersList,
   ) {
@@ -331,7 +324,7 @@ class MoveLogic {
     return placesToMove;
   }
 
-  static List<int> _getAllBishopPlaceToMoveDownRight(
+  static List<int> _getAllBishopPlaceToMoveDownLeft(
     int currentBishopPosition,
     List<Solider> allSoldiersList,
   ) {
@@ -802,11 +795,15 @@ class MoveLogic {
     board.getChessBoardList()[locationToMove] = currentLocationSoldier;
     board.getChessBoardList()[currentPosition] = locationToMoveSoldier;
 
+    currentLocationSoldier.firstMove = false;
+
     return board;
   }
 
   static Board move(Board board, int locationToMove, int position, bool turn) {
     SoliderType type = board.getChessBoardList()[position].soliderType;
+    if (type == SoliderType.none) return board;
+
     bool isfirstmove = board.getChessBoardList()[position].firstMove;
     List<int> locations = getAllSoldierMoves(
       position,

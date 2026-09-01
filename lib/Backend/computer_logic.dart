@@ -5,8 +5,6 @@ import 'package:chess_app_v1/Models/solider.dart';
 import 'package:chess_app_v1/Models/player.dart';
 import 'package:chess_app_v1/Models/board.dart';
 import 'dart:math';
-import 'package:chess_app_v1/Models/computer_turn.dart';
-import 'package:chess_app_v1/Validations/positions_validations.dart';
 
 class ComputerLogic {
   static SoliderType _whichType() {

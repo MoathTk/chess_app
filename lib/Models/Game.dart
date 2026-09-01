@@ -2,7 +2,6 @@ import 'package:chess_app_v1/Models/board.dart';
 import 'package:chess_app_v1/Models/player.dart';
 import 'package:chess_app_v1/DataBase/chess_db.dart';
 import 'package:chess_app_v1/Models/solider.dart';
-import 'package:chess_app_v1/Screens/game_screen.dart';
 
 class Game {
   Game({
