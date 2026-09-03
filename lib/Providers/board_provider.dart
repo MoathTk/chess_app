@@ -273,6 +273,42 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     return board;
   }
 
+  Future<Board> _resolveCheckState(
+    Board updatedBoard,
+    Solider mover,
+    bool currentTurn,
+  ) async {
+    int checked = CheckLogic.isSoldierMayAttacksKings(
+      mover.soliderposition,
+      updatedBoard,
+      currentTurn ? 2 : 1,
+    );
+    updatedBoard.game.checkKing(checked);
+
+    if (checked == 1 || checked == 2) {
+      if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
+        updatedBoard.game.winner = currentTurn ? 0 : 1;
+      }
+      bool setted = await _setSoldierAsCheckerInDB(
+        mover.soliderID,
+        mover.playerID,
+      );
+      if (setted) {
+        updatedBoard.getChessBoardList()[mover.soliderposition].checker = true;
+      }
+    } else {
+      bool unSetted = await _unSetSoldierAsCheckerInDB(
+        mover.soliderID,
+        mover.playerID,
+      );
+      if (unSetted) {
+        updatedBoard.getChessBoardList()[mover.soliderposition].checker = false;
+      }
+    }
+
+    return updatedBoard;
+  }
+
   void moveSolider(int positionToMove) async {
     if (PositionsValidations.validSoldierPosiiton(state.currentTouchedIndex) &&
         PositionsValidations.validSoldierPosiiton(positionToMove)) {
@@ -317,52 +353,12 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
               movedToIndex: next,
             ); //Moath12-#4ieo#
             //await AudioService.playRingBell();
-            int checked = CheckLogic.isSoldierMayAttacksKings(
-              movedSoldier.soliderposition,
-              state.board,
-              currentTurn ? 2 : 1,
+            updatedBoard = await _resolveCheckState(
+              updatedBoard,
+              movedSoldier,
+              currentTurn,
             );
-            state.board.game.checkKing(checked);
-
-            if (checked == 1) {
-              if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
-                updatedBoard.game.winner = currentTurn ? 0 : 1;
-              }
-              bool setted = await _setSoldierAsCheckerInDB(
-                movedSoldier.soliderID,
-                movedSoldier.playerID,
-              );
-              if (setted) {
-                updatedBoard.getChessBoardList()[positionToMove].checker = true;
-                updatedBoard.game.checkKing(1);
-
-                state.copyWith(board: updatedBoard);
-              }
-            } else if (checked == 2) {
-              if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
-                updatedBoard.game.winner = currentTurn ? 0 : 1;
-              }
-              bool setted = await _setSoldierAsCheckerInDB(
-                movedSoldier.soliderID,
-                movedSoldier.playerID,
-              );
-              if (setted) {
-                updatedBoard.getChessBoardList()[positionToMove].checker = true;
-                updatedBoard.game.checkKing(2);
-                state.copyWith(board: updatedBoard);
-              }
-            } else {
-              bool unSetted = await _unSetSoldierAsCheckerInDB(
-                movedSoldier.soliderID,
-                movedSoldier.playerID,
-              );
-              if (unSetted) {
-                updatedBoard.getChessBoardList()[positionToMove].checker =
-                    false;
-                updatedBoard.game.checkKing(0);
-                state.copyWith(board: updatedBoard);
-              }
-            }
+            state = state.copyWith(board: updatedBoard);
             if (movedSoldier.soliderType == SoliderType.pawn &&
                 PositionsValidations.pawnReachedEnd(
                   currentTurn,
@@ -386,12 +382,6 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
         }
       }
     }
-  }
-
-  bool _checkKilledKing() {
-    bool willBeKilled = false;
-
-    return willBeKilled;
   }
 
   void killSoldier(int positionToKill) async {
@@ -437,53 +427,12 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
             );
             killerSolider = updatedBoard.getChessBoardList()[positionToKill];
 
-            int checked = CheckLogic.isSoldierMayAttacksKings(
-              killerSolider.soliderposition,
-              state.board,
-              currentTurn ? 2 : 1,
+            updatedBoard = await _resolveCheckState(
+              updatedBoard,
+              killerSolider,
+              currentTurn,
             );
-            state.board.game.checkKing(checked);
-
-            if (checked == 1) {
-              if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
-                state.board.game.winner = currentTurn ? 0 : 1;
-              }
-              bool setted = await _setSoldierAsCheckerInDB(
-                killerSolider.soliderID,
-                killerSolider.playerID,
-              );
-              if (setted) {
-                updatedBoard.getChessBoardList()[positionToKill].checker = true;
-                updatedBoard.game.checkKing(1);
-
-                state.copyWith(board: updatedBoard);
-                if (_checkKilledKing()) {}
-              }
-            } else if (checked == 2) {
-              if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
-                state.board.game.winner = currentTurn ? 0 : 1;
-              }
-              bool setted = await _setSoldierAsCheckerInDB(
-                killerSolider.soliderID,
-                killerSolider.playerID,
-              );
-              if (setted) {
-                updatedBoard.getChessBoardList()[positionToKill].checker = true;
-                updatedBoard.game.checkKing(2);
-                state.copyWith(board: updatedBoard);
-              }
-            } else {
-              bool unSetted = await _unSetSoldierAsCheckerInDB(
-                killerSolider.soliderID,
-                killerSolider.playerID,
-              );
-              if (unSetted) {
-                updatedBoard.getChessBoardList()[positionToKill].checker =
-                    false;
-                updatedBoard.game.checkKing(0);
-                state.copyWith(board: updatedBoard);
-              }
-            }
+            state = state.copyWith(board: updatedBoard);
             if (killerSolider.soliderType == SoliderType.pawn) {
               bool promoted = await _setPawnAsMustPromoteToPlayer(
                 killerSolider,
