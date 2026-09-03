@@ -8,7 +8,6 @@ import 'package:chess_app_v1/Models/Game.dart';
 import 'package:chess_app_v1/Models/solider.dart';
 
 import 'package:chess_app_v1/Screens/game_screen.dart';
-import 'package:flutter/material.dart';
 
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:chess_app_v1/Backend/check_logic.dart';
@@ -57,6 +56,10 @@ class GameBoardState {
 
 class BoardNotifier extends StateNotifier<GameBoardState> {
   BoardNotifier(super.gameboard);
+
+  bool _isP1Turn() => state.currentTurn == 0;
+
+  int _opponentKing() => _isP1Turn() ? 2 : 1;
 
   int hasToPromotePawn() {
     Game currentGame = state.board.game;
@@ -174,7 +177,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
 
     Solider pawnToPromote = state.board.game.getPawnByID(
       pawnID,
-      state.currentTurn == 0 ? true : false,
+      _isP1Turn(),
       state.board,
     );
 
@@ -183,7 +186,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
       if (promoted) {
         bool dePromotedFromPlayerInDB = await _unSetPawnAsMustPromoteToPlayer(
           pawnToPromote,
-          state.currentTurn == 0 ? true : false,
+          _isP1Turn(),
         );
         if (dePromotedFromPlayerInDB) {
           Board board = state.board;
@@ -514,31 +517,13 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
                 e.playerID != state.board.getChessBoardList()[index].playerID),
           )
           .toList();
-      if (anyKingChecked == 1) {
-        //state.board.game.checkKing(1);
-        placesToMove = CheckLogic.willMovePreventKilling(
-          index,
-          state.board.getChessBoardList()[index].soliderID,
-          checkers.map((e) => e.soliderID).toList(),
-          state.board,
-        );
-      } else if (anyKingChecked == 2) {
-        //state.board.game.checkKing(2);
-        placesToMove = CheckLogic.willMovePreventKilling(
-          index,
-          state.board.getChessBoardList()[index].soliderID,
 
-          checkers.map((e) => e.soliderID).toList(),
-          state.board,
-        );
-      } else {
-        placesToMove = CheckLogic.willMovePreventKilling(
-          index,
-          state.board.getChessBoardList()[index].soliderID,
-          [],
-          state.board,
-        );
-      }
+      placesToMove = CheckLogic.willMovePreventKilling(
+        index,
+        state.board.getChessBoardList()[index].soliderID,
+        anyKingChecked == 0 ? [] : checkers.map((e) => e.soliderID).toList(),
+        state.board,
+      );
     }
 
     return placesToMove;

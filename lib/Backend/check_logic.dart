@@ -72,6 +72,9 @@ class CheckLogic {
             preventer.soliderposition,
             turn,
           );
+          if (preventer.soliderType == SoliderType.king) {
+            virturalGameBoard.editKingPosition(preventerMoves[j], turn);
+          }
 
           killerSpots = KillLogic.getAllSoldierKillPostions(
             solider.soliderposition,
@@ -183,6 +186,9 @@ class CheckLogic {
             turn,
             preventerKills[j],
           );
+          if (preventer.soliderType == SoliderType.king) {
+            virturalGameBoard.editKingPosition(preventerKills[j], turn);
+          }
 
           killerSpots = KillLogic.getAllSoldierKillPostions(
             solider.soliderposition,
@@ -193,13 +199,13 @@ class CheckLogic {
 
           if (turn) {
             if (!killerSpots.contains(
-              virturalGameBoard.game.playerOne.king.soliderposition,
+              virturalGameBoard.player1KingPosition,
             )) {
               legalKills.add(preventerKills[j]);
             }
           } else {
             if (!killerSpots.contains(
-              virturalGameBoard.game.playerTwo.king.soliderposition,
+              virturalGameBoard.player2kingPosition,
             )) {
               legalKills.add(preventerKills[j]);
             }
@@ -388,42 +394,37 @@ class CheckLogic {
     if (attackers.isEmpty) {
       return [placeToMove];
     }
-    int whichKingPosition = turn
-        ? gameBoardClone.player1KingPosition
-        : gameBoardClone.player2kingPosition;
+    bool currentPositionIsKing = gameBoardClone
+            .getChessBoardList()[currentPosition]
+            .soliderType ==
+        SoliderType.king;
 
-    // if (isAnyKingChecked(gameBoardClone, currentPosition) > 0) {
-    //   return [placeToMove];
-    // }
     for (int i = 0; i < attackers.length; i++) {
-      List<int> attackerPlacesToAttackBeforeMove =
-          KillLogic.getAllSoldierKillPostions(
-            attackers[i].soliderposition,
-            attackers[i].soliderType,
-            gameBoardClone,
-            turn,
-          );
-
-      gameBoardClone = MoveLogic.move(
-        gameBoardClone,
+      Board virtualBoard = gameBoardClone.clone();
+      virtualBoard = MoveLogic.move(
+        virtualBoard,
         placeToMove,
         currentPosition,
-
         turn,
       );
 
-      List<int> attackerPlacesToAttackAtferMove =
+      if (currentPositionIsKing) {
+        virtualBoard.editKingPosition(placeToMove, turn);
+      }
+
+      int whichKingPosition = turn
+          ? virtualBoard.player1KingPosition
+          : virtualBoard.player2kingPosition;
+
+      List<int> attackerPlacesToAttackAfterMove =
           KillLogic.getAllSoldierKillPostions(
             attackers[i].soliderposition,
             attackers[i].soliderType,
-            gameBoardClone,
+            virtualBoard,
             turn,
           );
 
-      if (attackerPlacesToAttackAtferMove == attackerPlacesToAttackBeforeMove) {
-        continue;
-      }
-      if (attackerPlacesToAttackAtferMove.contains(whichKingPosition)) {
+      if (attackerPlacesToAttackAfterMove.contains(whichKingPosition)) {
         allPossibleAttackers.add(attackers[i].soliderID);
       }
     }
@@ -453,41 +454,37 @@ class CheckLogic {
     if (attackers.isEmpty) {
       return [placesToKill];
     }
-    int whichKingPosition = turn
-        ? gameBoardClone.player1KingPosition
-        : gameBoardClone.player2kingPosition;
+    bool currentPositionIsKing = gameBoardClone
+            .getChessBoardList()[currentPosition]
+            .soliderType ==
+        SoliderType.king;
 
-    // if (isAnyKingChecked(gameBoardClone, currentPosition) > 0) {
-    //   return [placeToMove];
-    // }
     for (int i = 0; i < attackers.length; i++) {
-      List<int> attackerPlacesToAttackBeforeKill =
-          KillLogic.getAllSoldierKillPostions(
-            attackers[i].soliderposition,
-            attackers[i].soliderType,
-            gameBoardClone,
-            turn,
-          );
-
-      gameBoardClone = KillLogic.killSoldier(
+      Board virtualBoard = gameBoardClone.clone();
+      virtualBoard = KillLogic.killSoldier(
         currentPosition,
-        gameBoardClone,
+        virtualBoard,
         turn,
         placesToKill,
       );
 
-      List<int> attackerPlacesToAttackAtferKill =
+      if (currentPositionIsKing) {
+        virtualBoard.editKingPosition(placesToKill, turn);
+      }
+
+      int whichKingPosition = turn
+          ? virtualBoard.player1KingPosition
+          : virtualBoard.player2kingPosition;
+
+      List<int> attackerPlacesToAttackAfterKill =
           KillLogic.getAllSoldierKillPostions(
             attackers[i].soliderposition,
             attackers[i].soliderType,
-            gameBoardClone,
+            virtualBoard,
             turn,
           );
 
-      if (attackerPlacesToAttackAtferKill == attackerPlacesToAttackBeforeKill) {
-        continue;
-      }
-      if (attackerPlacesToAttackAtferKill.contains(whichKingPosition)) {
+      if (attackerPlacesToAttackAfterKill.contains(whichKingPosition)) {
         allPossibleAttackers.add(attackers[i].soliderID);
       }
     }
