@@ -278,10 +278,10 @@ class MoveLogic {
       if (PositionsValidations.validSoldierPosiiton(currentPositionToMove)) {
         soliderType = allSoldiersList[currentPositionToMove].soliderType;
         if (PositionsValidations.isPlaceHasNoSoldier(soliderType)) {
-          if ((!PositionsValidations.atEndsRows(currentPositionToMove))) {
+          if ((!PositionsValidations.atStartsRows(currentPositionToMove))) {
             placesToMove.add(currentPositionToMove);
           } else {
-            //placesToMove.add(currentPositionToMove);
+            placesToMove.add(currentPositionToMove);
             break;
           }
         } else {
@@ -803,6 +803,16 @@ class MoveLogic {
   static Board move(Board board, int locationToMove, int position, bool turn) {
     SoliderType type = board.getChessBoardList()[position].soliderType;
     if (type == SoliderType.none) return board;
+
+    int movingPlayerID = board.getChessBoardList()[position].playerID;
+    int currentTurnPlayerID =
+        turn ? board.game.playerOne.id : board.game.playerTwo.id;
+    if (movingPlayerID != currentTurnPlayerID) return board;
+
+    if (board.getChessBoardList()[locationToMove].soliderType !=
+        SoliderType.none) {
+      return board;
+    }
 
     bool isfirstmove = board.getChessBoardList()[position].firstMove;
     List<int> locations = getAllSoldierMoves(

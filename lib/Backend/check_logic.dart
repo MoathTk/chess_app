@@ -76,22 +76,24 @@ class CheckLogic {
             virturalGameBoard.editKingPosition(preventerMoves[j], turn);
           }
 
+          bool solverTurn = solider.playerID == gameBoard.game.playerOne.id;
+
           killerSpots = KillLogic.getAllSoldierKillPostions(
             solider.soliderposition,
             solider.soliderType,
             virturalGameBoard,
-            turn,
+            solverTurn,
           );
 
           if (turn) {
             if (!killerSpots.contains(
-              virturalGameBoard.game.playerOne.king.soliderposition,
+              virturalGameBoard.player1KingPosition,
             )) {
               legalMoves.add(preventerMoves[j]);
             }
           } else {
             if (!killerSpots.contains(
-              virturalGameBoard.game.playerTwo.king.soliderposition,
+              virturalGameBoard.player2kingPosition,
             )) {
               legalMoves.add(preventerMoves[j]);
             }
@@ -190,11 +192,13 @@ class CheckLogic {
             virturalGameBoard.editKingPosition(preventerKills[j], turn);
           }
 
+          bool solverTurn = solider.playerID == gameBoard.game.playerOne.id;
+
           killerSpots = KillLogic.getAllSoldierKillPostions(
             solider.soliderposition,
             solider.soliderType,
             virturalGameBoard,
-            turn,
+            solverTurn,
           );
 
           if (turn) {
@@ -416,12 +420,15 @@ class CheckLogic {
           ? virtualBoard.player1KingPosition
           : virtualBoard.player2kingPosition;
 
+      bool attackerTurn =
+          attackers[i].playerID == gameBoardClone.game.playerOne.id;
+
       List<int> attackerPlacesToAttackAfterMove =
           KillLogic.getAllSoldierKillPostions(
             attackers[i].soliderposition,
             attackers[i].soliderType,
             virtualBoard,
-            turn,
+            attackerTurn,
           );
 
       if (attackerPlacesToAttackAfterMove.contains(whichKingPosition)) {
@@ -476,12 +483,15 @@ class CheckLogic {
           ? virtualBoard.player1KingPosition
           : virtualBoard.player2kingPosition;
 
+      bool attackerTurn =
+          attackers[i].playerID == gameBoardClone.game.playerOne.id;
+
       List<int> attackerPlacesToAttackAfterKill =
           KillLogic.getAllSoldierKillPostions(
             attackers[i].soliderposition,
             attackers[i].soliderType,
             virtualBoard,
-            turn,
+            attackerTurn,
           );
 
       if (attackerPlacesToAttackAfterKill.contains(whichKingPosition)) {

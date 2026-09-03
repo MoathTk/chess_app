@@ -51,9 +51,9 @@ class PieceCube extends ConsumerWidget {
               if (soliderType != SoliderType.none &&
                   gameState.currentTurn == turn) {
                 if (gameState.currentTouchedIndex != pieceIndex) {
-                  gameNotifier.convertCurrntIndex(pieceIndex);
+                  gameNotifier.selectIndex(pieceIndex);
                 } else {
-                  gameNotifier.convertCurrntIndex(-1);
+                  gameNotifier.selectIndex(-1);
                 }
               } else {
                 if (gameState.placesToMove.contains(pieceIndex)) {

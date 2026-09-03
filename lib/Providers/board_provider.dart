@@ -155,7 +155,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     return unPromoted;
   }
 
-  int _getpromotabeID() {
+  int _getPromotablePawnID() {
     int pawnID = -1;
     if (state.board.game.playerOne.promotable >= 0) {
       pawnID = state.board
@@ -173,7 +173,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
 
   Future<bool> promotePawnInDatabase(SoliderType typeToPromote) async {
     bool promoted = false;
-    int pawnID = _getpromotabeID();
+    int pawnID = _getPromotablePawnID();
 
     Solider pawnToPromote = state.board.game.getPawnByID(
       pawnID,
@@ -281,7 +281,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     int checked = CheckLogic.isSoldierMayAttacksKings(
       mover.soliderposition,
       updatedBoard,
-      currentTurn ? 2 : 1,
+      _opponentKing(),
     );
     updatedBoard.game.checkKing(checked);
 
@@ -453,7 +453,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     }
   }
 
-  List<int> onchangedCurrentIndexMoves(int index) {
+  List<int> getMovesForIndex(int index) {
     List<int> placesToMove = [];
     int anyKingChecked = state.board.game.chekcedKing;
 
@@ -478,7 +478,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     return placesToMove;
   }
 
-  List<int> onchangedCurrentIndexKills(int index) {
+  List<int> getKillsForIndex(int index) {
     List<int> placesToKill = [];
     int anyKingChecked = state.board.game.chekcedKing;
     if (PositionsValidations.validSoldierPosiiton(index)) {
@@ -514,11 +514,11 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     return placesToKill;
   }
 
-  void convertCurrntIndex(int index) {
+  void selectIndex(int index) {
     state = state.copyWith(
       currentTouchedIndex: index,
-      placesToMove: onchangedCurrentIndexMoves(index),
-      placesToKill: onchangedCurrentIndexKills(index),
+      placesToMove: getMovesForIndex(index),
+      placesToKill: getKillsForIndex(index),
     );
   }
 }
