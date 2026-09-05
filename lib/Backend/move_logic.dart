@@ -832,6 +832,115 @@ class MoveLogic {
     return board;
   }
 
+  // Performs the full castling move: moves the king two squares toward the
+  // rook and jumps the rook over the king to the square beside it. Both pieces
+  // are marked as having moved (no longer eligible for castling again).
+  static Board castling(
+    Board board,
+    int kingPosition,
+    int kingDestination,
+    bool turn,
+  ) {
+    // Determine which rook is involved based on the direction of the castling:
+    // king-side moves the king two squares to the right (higher index),
+    // queen-side two squares to the left (lower index).
+    bool kingSide = kingDestination > kingPosition;
+
+    // The involved rook sits at the far corner of the home rank: on the
+    // king-side it is home + 4 squares away, on the queen-side home - 3.
+    int kingHome = turn ? 3 : 59;
+    int rookPosition = kingSide ? kingHome + 4 : kingHome - 3;
+    int rookDestination = kingSide ? kingHome + 1 : kingHome - 1;
+
+    Solider king = board.getChessBoardList()[kingPosition];
+    Solider rook = board.getChessBoardList()[rookPosition];
+
+    // Update the piece objects' tracked positions.
+    king.soliderposition = kingDestination;
+    rook.soliderposition = rookDestination;
+
+    // Place both pieces on their new squares and clear the old squares.
+    board.getChessBoardList()[kingDestination] = king;
+    board.getChessBoardList()[rookDestination] = rook;
+    board.getChessBoardList()[kingPosition] = Solider.getEmptyInstance();
+    board.getChessBoardList()[rookPosition] = Solider.getEmptyInstance();
+
+    // Neither the king nor the rook can castle again.
+    king.firstMove = false;
+    rook.firstMove = false;
+
+    // Keep the in-memory king-position tracker in sync.
+    board.editKingPosition(kingDestination, turn);
+
+    return board;
+  }
+
+  // Generates the raw castling destination squares for the given king, based
+  // only on positional rules: the king is on its home square and has not moved,
+  // the involved rook is still on its home square and has not moved, and the
+  // squares between the king and the rook are empty.
+  //
+  // NOTE: this does NOT check whether the king passes through check; that
+  // safety check is applied separately (via CheckLogic.isCastlePathSafe).
+  static List<int> _getRawCastlingMoves(
+    int kingPosition,
+    Board board,
+    bool turn,
+  ) {
+    // Define the two home squares for each player's king and rooks.
+    // playerOne (turn == true) sits on the top rank, playerTwo on the bottom.
+    int kingHome = turn ? 3 : 59;
+    int kingSideRookHome = turn ? 7 : 63; // short (king-side) castling
+    int queenSideRookHome = turn ? 0 : 56; // long (queen-side) castling
+
+    // The king must be home and must not have moved yet.
+    if (kingPosition != kingHome) return [];
+    if (!board.getChessBoardList()[kingPosition].firstMove) return [];
+
+    List<int> castlingMoves = [];
+
+    // Try each rook in turn (king-side then queen-side).
+    List<int> rooksHome = [kingSideRookHome, queenSideRookHome];
+    bool kingSide = true;
+
+    for (int i = 0; i < rooksHome.length; i++) {
+      int rookHome = rooksHome[i];
+      Solider rook = board.getChessBoardList()[rookHome];
+
+      // The rook must be present, belong to the same player as the king, and
+      // must never have moved.
+      bool rookValid = rook.soliderType == SoliderType.rock &&
+          rook.playerID == board.getChessBoardList()[kingPosition].playerID &&
+          rook.firstMove;
+
+      if (!rookValid) {
+        kingSide = !kingSide;
+        continue;
+      }
+
+      // Check that every square between the king and the rook is empty.
+      int start = kingPosition < rookHome ? kingPosition + 1 : rookHome + 1;
+      int end = kingPosition < rookHome ? rookHome : kingPosition;
+      bool pathClear = true;
+      for (int sq = start; sq < end; sq++) {
+        if (board.getChessBoardList()[sq].soliderType != SoliderType.none) {
+          pathClear = false;
+          break;
+        }
+      }
+
+      if (pathClear) {
+        // King lands two squares toward the rook.
+        int kingDestination = kingSide ? kingPosition + 2 : kingPosition - 2;
+        castlingMoves.add(kingDestination);
+      }
+
+      kingSide = !kingSide;
+    }
+
+    return castlingMoves;
+  }
+
   static List<int> getAllSoldierMoves(
     int position,
     SoliderType type,
@@ -857,6 +966,10 @@ class MoveLogic {
 
       case SoliderType.king:
         moves = _getAllKingMoves(position, board.getChessBoardList());
+        // Append potential castling destinations (king-side and queen-side).
+        // The squares are only surfaced here; the check-safe filtering is done
+        // in board_provider via CheckLogic.isCastlePathSafe.
+        moves.addAll(_getRawCastlingMoves(position, board, turn));
 
       case SoliderType.none:
         moves = [];

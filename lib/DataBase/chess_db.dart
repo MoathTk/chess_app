@@ -310,7 +310,8 @@ class ChessDb {
         soliderType: SoliderType.rock,
         soliderposition: rook['Position'],
         playerID: playerID,
-        firstMove: false,
+        // Track whether the rook has moved (needed for castling eligibility).
+        firstMove: rook['FirstMove'] == 0 ? false : true,
         checker: rook['Checker'] == 0 ? false : true,
       );
     }).toList();
@@ -372,7 +373,8 @@ class ChessDb {
         soliderType: SoliderType.king,
         soliderposition: king['Position'],
         playerID: playerID,
-        firstMove: false,
+        // Track whether the king has moved (needed for castling eligibility).
+        firstMove: king['FirstMove'] == 0 ? false : true,
         checker: king['Checker'] == 0 ? false : true,
       );
     }
@@ -525,7 +527,8 @@ class ChessDb {
       'Type': 1,
       'Position': first ? 3 : 59,
       'PlayerID': playerID,
-      'FirstMove': 0,
+      // King starts unmoved; needed for castling eligibility.
+      'FirstMove': 1,
       'Checker': 0,
     });
     //queen
@@ -564,14 +567,16 @@ class ChessDb {
       'Type': 4,
       'Position': first ? 0 : 56,
       'PlayerID': playerID,
-      'FirstMove': 0,
+      // Rooks start unmoved; needed for castling eligibility.
+      'FirstMove': 1,
       'Checker': 0,
     });
     await _database!.insert('Soldier', {
       'Type': 4,
       'Position': first ? 7 : 63,
       'PlayerID': playerID,
-      'FirstMove': 0,
+      // Rooks start unmoved; needed for castling eligibility.
+      'FirstMove': 1,
       'Checker': 0,
     });
 

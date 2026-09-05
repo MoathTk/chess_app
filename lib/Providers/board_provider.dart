@@ -325,18 +325,50 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
         currentTurn,
         state.board.clone(),
       )) {
-        Board updatedBoard = MoveLogic.move(
-          state.board,
-          positionToMove,
-          state.currentTouchedIndex,
-          currentTurn,
-        );
+        int selectedIndex = state.currentTouchedIndex;
+
+        // Detect a castling move: the selected piece is a king and the target
+        // square is two squares away on the same rank.
+        bool isCastling = false;
+        int rookDestination = -1;
+        if (state.board.getChessBoardList()[selectedIndex].soliderType ==
+            SoliderType.king) {
+          if ((positionToMove - selectedIndex).abs() == 2 &&
+              positionToMove ~/ 8 == selectedIndex ~/ 8) {
+            bool kingSide = positionToMove > selectedIndex;
+            rookDestination =
+                kingSide ? selectedIndex + 1 : selectedIndex - 1;
+            isCastling = true;
+          }
+        }
+
+        Board updatedBoard = isCastling
+            ? MoveLogic.castling(
+                state.board,
+                selectedIndex,
+                positionToMove,
+                currentTurn,
+              )
+            : MoveLogic.move(
+                state.board,
+                positionToMove,
+                selectedIndex,
+                currentTurn,
+              );
 
         if (state.placesToMove.contains(positionToMove)) {
-          bool moved = await _moveSoldierInDataBase(
+          // For castling we must persist both the king and the rook, since the
+          // move relocates two pieces.
+          bool movedKing = await _moveSoldierInDataBase(
             updatedBoard.getChessBoardList()[positionToMove],
           );
-          if (moved) {
+          bool movedRook = true;
+          if (isCastling) {
+            movedRook = await _moveSoldierInDataBase(
+              updatedBoard.getChessBoardList()[rookDestination],
+            );
+          }
+          if (movedKing && movedRook) {
             Solider movedSoldier = updatedBoard
                 .getChessBoardList()[positionToMove];
             if (movedSoldier.soliderType == SoliderType.king) {
@@ -473,6 +505,31 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
         anyKingChecked == 0 ? [] : checkers.map((e) => e.soliderID).toList(),
         state.board,
       );
+
+      // When the selected piece is a king, the generated moves may include
+      // castling destinations. Castling is only legal if the king does not pass
+      // through (or land on) an attacked square, so filter those squares out.
+      if (state.board.getChessBoardList()[index].soliderType ==
+          SoliderType.king) {
+        bool turn = state.board.game.playerOne.turn;
+        int moverPlayerID =
+            state.board.getChessBoardList()[index].playerID;
+
+        placesToMove = placesToMove.where((move) {
+          // A castling destination is exactly two squares away on the same row.
+          if ((move - index).abs() == 2 &&
+              move ~/ 8 == index ~/ 8) {
+            return CheckLogic.isCastlePathSafe(
+              state.board,
+              index,
+              move,
+              moverPlayerID,
+              turn,
+            );
+          }
+          return true;
+        }).toList();
+      }
     }
 
     return placesToMove;

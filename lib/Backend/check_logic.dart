@@ -86,15 +86,11 @@ class CheckLogic {
           );
 
           if (turn) {
-            if (!killerSpots.contains(
-              virturalGameBoard.player1KingPosition,
-            )) {
+            if (!killerSpots.contains(virturalGameBoard.player1KingPosition)) {
               legalMoves.add(preventerMoves[j]);
             }
           } else {
-            if (!killerSpots.contains(
-              virturalGameBoard.player2kingPosition,
-            )) {
+            if (!killerSpots.contains(virturalGameBoard.player2kingPosition)) {
               legalMoves.add(preventerMoves[j]);
             }
           }
@@ -202,15 +198,11 @@ class CheckLogic {
           );
 
           if (turn) {
-            if (!killerSpots.contains(
-              virturalGameBoard.player1KingPosition,
-            )) {
+            if (!killerSpots.contains(virturalGameBoard.player1KingPosition)) {
               legalKills.add(preventerKills[j]);
             }
           } else {
-            if (!killerSpots.contains(
-              virturalGameBoard.player2kingPosition,
-            )) {
+            if (!killerSpots.contains(virturalGameBoard.player2kingPosition)) {
               legalKills.add(preventerKills[j]);
             }
           }
@@ -398,9 +390,8 @@ class CheckLogic {
     if (attackers.isEmpty) {
       return [placeToMove];
     }
-    bool currentPositionIsKing = gameBoardClone
-            .getChessBoardList()[currentPosition]
-            .soliderType ==
+    bool currentPositionIsKing =
+        gameBoardClone.getChessBoardList()[currentPosition].soliderType ==
         SoliderType.king;
 
     for (int i = 0; i < attackers.length; i++) {
@@ -439,6 +430,74 @@ class CheckLogic {
     return allPossibleAttackers;
   }
 
+  // Checks that none of the squares the king travels through during castling
+  // (its start square, every intermediate square, and the destination square)
+  // is attacked by an opponent piece. Castling is illegal if any of these
+  // squares is under attack.
+  static bool isCastlePathSafe(
+    Board gameBoard,
+    int kingFrom,
+    int kingTo,
+    int playerID,
+    bool turn,
+  ) {
+    // Build the ordered list of squares the king touches on its way:
+    // from the starting square up to and including the destination.
+    int step = kingTo > kingFrom ? 1 : -1;
+    List<int> pathSquares = [];
+    for (int sq = kingFrom; sq != kingTo + step; sq += step) {
+      pathSquares.add(sq);
+    }
+
+    // Determine the opponent pieces that could threaten the king's path.
+    List<Solider> attackers = gameBoard
+        .getChessBoardList()
+        .where(
+          (sold) =>
+              sold.playerID != playerID &&
+              PositionsValidations.validSoldierPosiiton(sold.soliderposition),
+        )
+        .toList();
+
+    // If the opponent has no pieces on the board the path is trivially safe.
+    if (attackers.isEmpty) {
+      return true;
+    }
+
+    // For every square on the king's path, simulate the king standing there and
+    // verify that no opponent piece can attack it.
+    for (int i = 0; i < pathSquares.length; i++) {
+      int kingSquare = pathSquares[i];
+      Board virtualBoard = gameBoard.clone();
+      // Move the king onto the current path square and keep the king tracker in
+      // sync so the simulator can detect attacks against it.
+      virtualBoard = MoveLogic.move(virtualBoard, kingSquare, kingFrom, turn);
+      virtualBoard.editKingPosition(kingSquare, turn);
+
+      int whichKingPosition = turn
+          ? virtualBoard.player1KingPosition
+          : virtualBoard.player2kingPosition;
+
+      for (int j = 0; j < attackers.length; j++) {
+        bool attackerTurn =
+            attackers[j].playerID == gameBoard.game.playerOne.id;
+        List<int> attackerPlacesToAttack = KillLogic.getAllSoldierKillPostions(
+          attackers[j].soliderposition,
+          attackers[j].soliderType,
+          virtualBoard,
+          attackerTurn,
+        );
+        // If any attacker can reach the king's current path square the whole
+        // castling move is illegal.
+        if (attackerPlacesToAttack.contains(whichKingPosition)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
+  }
+
   static List<int> _getAllPossibleAttackersAfterKillingAPosition(
     int currentPosition,
     int placesToKill,
@@ -461,9 +520,8 @@ class CheckLogic {
     if (attackers.isEmpty) {
       return [placesToKill];
     }
-    bool currentPositionIsKing = gameBoardClone
-            .getChessBoardList()[currentPosition]
-            .soliderType ==
+    bool currentPositionIsKing =
+        gameBoardClone.getChessBoardList()[currentPosition].soliderType ==
         SoliderType.king;
 
     for (int i = 0; i < attackers.length; i++) {
