@@ -68,6 +68,20 @@ class ChessDb {
     return set > 0;
   }
 
+  // Stores the result of a finished game. The winner value follows the
+  // in-memory convention: 0 = playerOne (white), 1 = playerTwo (black),
+  // -1 = game still running.
+  static Future<bool> setGameWinner(int gameID, int winner) async {
+    _database ??= await getInctence();
+    final set = await _database!.update(
+      "Game",
+      {"winner": winner},
+      where: "ID = ?",
+      whereArgs: [gameID],
+    );
+    return set > 0;
+  }
+
   static Future<void> _saveAllPlayerSoldiers(Player player) async {
     _database ??= await getInctence();
     for (int i = 0; i < player.pawns.length; i++) {
@@ -219,7 +233,10 @@ class ChessDb {
         playerOne: gamePlayers[0],
         playerTwo: gamePlayers[1],
         dateOfStart: DateTime.now(),
-        winner: -1,
+        // Load the stored result so finished games stay finished after a
+        // restart. The column uses the in-memory convention: 0 = playerOne
+        // (white), 1 = playerTwo (black), -1 = still running.
+        winner: games[index]['winner'] ?? -1,
         chekcedKing: gamePlayers[0].getAllCheckersSoldier().isNotEmpty
             ? 2
             : gamePlayers[1].getAllCheckersSoldier().isNotEmpty

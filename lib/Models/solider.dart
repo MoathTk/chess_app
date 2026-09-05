@@ -23,6 +23,7 @@ class Solider {
       soliderposition: soliderposition,
       playerID: playerID,
       firstMove: firstMove,
+      checker: checker,
     );
   }
 

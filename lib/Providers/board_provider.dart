@@ -59,6 +59,11 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
 
   bool _isP1Turn() => state.currentTurn == 0;
 
+  // The game is over as soon as a winner is decided: winner == 0 means
+  // playerOne (white) won, winner == 1 means playerTwo (black) won.
+  bool get isGameOver =>
+      state.board.game.winner == 0 || state.board.game.winner == 1;
+
   int _opponentKing() => _isP1Turn() ? 2 : 1;
 
   int hasToPromotePawn() {
@@ -286,8 +291,19 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     updatedBoard.game.checkKing(checked);
 
     if (checked == 1 || checked == 2) {
+      // Mark the piece that just delivered the check as a "checker" BEFORE
+      // evaluating mate, because checkmate detection relies on the opponent's
+      // checker list being accurate.
+      updatedBoard.getChessBoardList()[mover.soliderposition].checker = true;
       if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
+        // The player who just moved delivered the checkmate, so they win.
+        // winner 0 = playerOne (white), winner 1 = playerTwo (black).
         updatedBoard.game.winner = currentTurn ? 0 : 1;
+        // Persist the result so the game stays finished after a restart.
+        await db.ChessDb.setGameWinner(
+          updatedBoard.game.gameID,
+          updatedBoard.game.winner,
+        );
       }
       bool setted = await _setSoldierAsCheckerInDB(
         mover.soliderID,
@@ -310,6 +326,8 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
   }
 
   void moveSolider(int positionToMove) async {
+    // Once the game is over no moves are allowed.
+    if (isGameOver) return;
     if (PositionsValidations.validSoldierPosiiton(state.currentTouchedIndex) &&
         PositionsValidations.validSoldierPosiiton(positionToMove)) {
       int previous = state.currentTouchedIndex;
@@ -409,7 +427,11 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
               }
             }
 
-            changeCurrentTurn();
+            // Only pass the turn if the game is still running; after a
+            // checkmate the game is over and there is no one to move.
+            if (!isGameOver) {
+              changeCurrentTurn();
+            }
           }
         }
       }
@@ -417,6 +439,8 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
   }
 
   void killSoldier(int positionToKill) async {
+    // Once the game is over no captures are allowed.
+    if (isGameOver) return;
     if (PositionsValidations.validSoldierPosiiton(state.currentTouchedIndex) &&
         PositionsValidations.validSoldierPosiiton(positionToKill)) {
       int previous = state.currentTouchedIndex;
@@ -478,7 +502,11 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
                 );
               }
             }
-            changeCurrentTurn();
+            // Only pass the turn if the game is still running; after a
+            // checkmate the game is over.
+            if (!isGameOver) {
+              changeCurrentTurn();
+            }
           }
         }
       }
@@ -572,6 +600,8 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
   }
 
   void selectIndex(int index) {
+    // Once the game is over no piece may be selected.
+    if (isGameOver) return;
     state = state.copyWith(
       currentTouchedIndex: index,
       placesToMove: getMovesForIndex(index),

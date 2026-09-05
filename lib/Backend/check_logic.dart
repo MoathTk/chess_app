@@ -235,7 +235,9 @@ class CheckLogic {
       unpreventiveMoves = CheckLogic.removeAllUnpreventiveMoves(
         moves,
         currentSoldier.soliderID,
-        currentPlayerToCheckLose.getAllCheckersSoldier(),
+        // The checkers are the opponent's pieces flagged as giving check.
+        // Only those dictate which moves actually resolve the check.
+        currentPlayerToCheckWin.getAllCheckersSoldier(),
         currentSoldier.playerID,
         currentPlayerToCheckWin.id,
         board,
@@ -249,12 +251,12 @@ class CheckLogic {
   }
 
   static bool checkMate(bool turn, Board board) {
-    bool checkmate = false;
-    if (!(canAnySoldierPrventkillByMove(turn, board) &&
-        canAnySoldierPrventkillByKill(turn, board))) {
-      checkmate = true;
-      print("checkmate!!!!");
-    }
+    // Checkmate = the side in check can NEITHER escape by moving/blocking
+    // NOR by capturing the checking piece. If either is possible, it is not
+    // mate, so only declare mate when BOTH prevention paths are impossible.
+    bool canPreventByMove = canAnySoldierPrventkillByMove(turn, board);
+    bool canPreventByKill = canAnySoldierPrventkillByKill(turn, board);
+    bool checkmate = !canPreventByMove && !canPreventByKill;
 
     return checkmate;
   }
@@ -316,7 +318,8 @@ class CheckLogic {
       unpreventiveMoves = CheckLogic.removeAllUnpreventiveKills(
         kills,
         currentSoldier.soliderID,
-        currentPlayerToCheckLose.getAllCheckersSoldier(),
+        // The checkers are the opponent's pieces flagged as giving check.
+        currentPlayerToCheckWin.getAllCheckersSoldier(),
         currentSoldier.playerID,
         currentPlayerToCheckWin.id,
         board,

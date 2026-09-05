@@ -113,32 +113,33 @@ class Board {
   }
 
   void _fillPlayerOneAndPlayerTwoKingAndQueen(Player player1, Player player2) {
-    if (_chessBoard.isNotEmpty) {
-      if (PositionsValidations.validSoldierPosiiton(
-        player1.king.soliderposition,
-      )) {
-        _chessBoard[player1.king.soliderposition] = player1.king;
-      }
+    if (_chessBoard.isEmpty) {
+      return;
+    }
+    if (PositionsValidations.validSoldierPosiiton(
+      player1.king.soliderposition,
+    )) {
+      _chessBoard[player1.king.soliderposition] = player1.king;
+    }
+    if (PositionsValidations.validSoldierPosiiton(
+      player2.king.soliderposition,
+    )) {
+      _chessBoard[player2.king.soliderposition] = player2.king;
+    }
 
-      for (int i = 0; i < player1.queen.length; i++) {
-        if (player1.queen[i].soliderposition > -1) {
-          _chessBoard[player1.queen[i].soliderposition] = player1.queen[i];
-        } else {
-          _fillKilledSoldiers(player1.queen[i]);
-        }
+    for (int i = 0; i < player1.queen.length; i++) {
+      if (player1.queen[i].soliderposition > -1) {
+        _chessBoard[player1.queen[i].soliderposition] = player1.queen[i];
+      } else {
+        _fillKilledSoldiers(player1.queen[i]);
       }
+    }
 
-      for (int i = 0; i < player1.queen.length; i++) {
-        if ((player1.king.soliderposition != player2.king.soliderposition) &&
-            (player1.queen[i].soliderposition !=
-                player2.queen[i].soliderposition)) {
-          _chessBoard[player2.king.soliderposition] = player2.king;
-          if (player2.queen[i].soliderposition > -1) {
-            _chessBoard[player2.queen[i].soliderposition] = player2.queen[i];
-          } else {
-            _fillKilledSoldiers(player2.queen[i]);
-          }
-        }
+    for (int i = 0; i < player2.queen.length; i++) {
+      if (player2.queen[i].soliderposition > -1) {
+        _chessBoard[player2.queen[i].soliderposition] = player2.queen[i];
+      } else {
+        _fillKilledSoldiers(player2.queen[i]);
       }
     }
   }

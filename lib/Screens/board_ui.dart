@@ -27,6 +27,12 @@ class GameBoard extends ConsumerStatefulWidget {
 }
 
 class _GameBoardState extends ConsumerState<GameBoard> {
+  // Tracks the last winner we already announced so the endgame dialog shows
+  // exactly once. Kept as widget state because every GameBoardState in the
+  // provider shares the same mutable Game object, so comparing winners between
+  // provider states cannot detect a transition.
+  int _announcedWinner = -1;
+
   // ✅ EDITION: Moved triggerGameOver out of the build method to the class scope
   void triggerGameOver(String winnerName, bool isWhiteWinner) {
     showDialog(
@@ -57,8 +63,13 @@ class _GameBoardState extends ConsumerState<GameBoard> {
 
     // ✅ EDITION: Safely listening for endgame state side-effects using ref.listen
     ref.listen(provider, (previous, next) {
-      if (next.board.game.winner == 1 || next.board.game.winner == 0) {
-        bool isWhiteWinner = next.board.game.winner == 0;
+      int winner = next.board.game.winner;
+      // Show the dialog the first time a decided winner is seen (0 =
+      // playerOne/white, 1 = playerTwo/black), regardless of the previous
+      // provider state, which shares the same mutable Game object.
+      if ((winner == 0 || winner == 1) && winner != _announcedWinner) {
+        _announcedWinner = winner;
+        bool isWhiteWinner = winner == 0;
         String winnerName = isWhiteWinner
             ? widget.player1Name
             : widget.player2Name;

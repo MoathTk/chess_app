@@ -30,6 +30,11 @@ class PieceCube extends ConsumerWidget {
       boardGameProvider(currentGame.gameID).notifier,
     );
 
+    // Once the game is over (winner decided) the board must not react to any
+    // taps, so ignore every interaction here at the UI level as well.
+    bool gameOver = gameState.board.game.winner == 0 ||
+        gameState.board.game.winner == 1;
+
     const Color lightSquare = Color.fromARGB(172, 255, 248, 220);
 
     const Color darkSquare = Color.fromARGB(255, 121, 102, 84);
@@ -48,6 +53,7 @@ class PieceCube extends ConsumerWidget {
         Center(
           child: InkWell(
             onTap: () {
+              if (gameOver) return;
               if (soliderType != SoliderType.none &&
                   gameState.currentTurn == turn) {
                 if (gameState.currentTouchedIndex != pieceIndex) {
