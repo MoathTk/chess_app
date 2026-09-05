@@ -533,7 +533,10 @@ class ChessDb {
     });
 
     bool isWhite = (player.color == ColorType.white);
-    _addPlayerSoldiers(playerID, isWhite);
+    // Must be awaited so every piece is committed before the game is reported
+    // as created; otherwise these inserts race with the next DB operation and
+    // pieces can be silently lost (broken rematch boards).
+    await _addPlayerSoldiers(playerID, isWhite);
 
     return playerID;
   }

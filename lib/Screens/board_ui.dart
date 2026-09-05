@@ -1,5 +1,7 @@
 import 'package:chess_app_v1/Providers/board_provider.dart';
 import 'package:chess_app_v1/Screens/promotion_screen.dart';
+import 'package:chess_app_v1/DataBase/chess_db.dart' as db;
+import 'package:chess_app_v1/Screens/game_screen.dart'; // for the shared games list
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:chess_app_v1/Models/Game.dart';
@@ -38,21 +40,58 @@ class _GameBoardState extends ConsumerState<GameBoard> {
     showDialog(
       context: context,
       barrierDismissible: false, // User must choose an option
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return WinnerDialog(
           winnerName: winnerName,
           isWhiteWinner: isWhiteWinner,
           onRematch: () {
-            Navigator.of(context).pop();
-            // TODO: Add logic to reset the board / start a new game
+            // Close the dialog, then start a fresh game with the same players.
+            Navigator.of(dialogContext).pop();
+            _startRematch();
           },
           onHome: () {
-            Navigator.of(context).pop();
-            // TODO: Navigator.pushReplacement to your Home Screen
+            // Close the dialog and return to the games list.
+            Navigator.of(dialogContext).pop();
+            _goHome();
           },
         );
       },
     );
+  }
+
+  // Starts a brand new match with the same players, mode and time control,
+  // replacing the current finished board with the fresh one.
+  Future<void> _startRematch() async {
+    int newGameID = await Game.addNewGame(
+      widget.player1Name,
+      widget.player2Name,
+      widget.currentGame.mode == 1,
+      10,
+      10,
+    );
+
+    // Keep the shared games list in sync so the new game can be opened.
+    games
+      ..clear()
+      ..addAll(await db.ChessDb.getAllUserGames());
+
+    if (!mounted) return;
+
+    Game newGame = games.firstWhere((g) => g.gameID == newGameID);
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => GameBoard(
+          player1Name: widget.player1Name,
+          player2Name: widget.player2Name,
+          currentGame: newGame,
+        ),
+      ),
+    );
+  }
+
+  // Returns to the games list (the home screen of the app).
+  void _goHome() {
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   @override
