@@ -71,6 +71,7 @@ class _GameBoardState extends ConsumerState<GameBoard> {
       widget.currentGame.mode == 1,
       widget.currentGame.timeControlMinutes,
       widget.currentGame.timeControlMinutes,
+      aiIsPlayerOne: widget.currentGame.aiIsPlayerOne,
     );
 
     // Keep the shared games list in sync so the new game can be opened.

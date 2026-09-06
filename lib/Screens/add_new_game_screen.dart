@@ -21,6 +21,10 @@ class _NewGameScreenState extends State<NewGameScreen> {
   // NEW STATE: track the game mode
   bool isVsComputer = false;
 
+  // vs Computer: whether the HUMAN plays white (computer = playerTwo/black).
+  // When false the computer is white (playerOne) and the human plays black.
+  bool humanPlaysWhite = true;
+
   void showNotAddedGameBanner(BuildContext context) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -100,22 +104,44 @@ class _NewGameScreenState extends State<NewGameScreen> {
 
                   const SizedBox(height: 30),
 
-                  // 2. PLAYER INPUTS
+                  // 2. PLAYER INPUTS (vs Computer: the human picks their side)
                   _buildPlayerInput(
                     p1Controller,
-                    "Player 1 (White)",
-                    Icons.person,
-                    accentCol,
-                    true, // Always enabled
+                    isVsComputer && !humanPlaysWhite
+                        ? "Computer (White)"
+                        : "Player 1 (White)",
+                    isVsComputer && !humanPlaysWhite
+                        ? Icons.computer
+                        : Icons.person,
+                    isVsComputer && !humanPlaysWhite
+                        ? Colors.greenAccent
+                        : accentCol,
+                    !isVsComputer || humanPlaysWhite, // Disabled when computer
                   ),
                   const SizedBox(height: 20),
                   _buildPlayerInput(
                     p2Controller,
-                    isVsComputer ? "AI Difficulty: Easy" : "Player 2 (Black)",
-                    isVsComputer ? Icons.computer : Icons.person_outline,
-                    isVsComputer ? Colors.greenAccent : Colors.blueAccent,
-                    !isVsComputer, // Disable if playing computer
+                    isVsComputer
+                        ? (humanPlaysWhite
+                            ? "AI Difficulty: Easy"
+                            : "Player 2 (Black)")
+                        : "Player 2 (Black)",
+                    isVsComputer && !humanPlaysWhite
+                        ? Icons.person_outline
+                        : (isVsComputer ? Icons.computer : Icons.person_outline),
+                    isVsComputer && !humanPlaysWhite
+                        ? Colors.blueAccent
+                        : (isVsComputer
+                            ? Colors.greenAccent
+                            : Colors.blueAccent),
+                    !isVsComputer || !humanPlaysWhite, // Disabled when computer
                   ),
+
+                  // 2b. vs Computer: pick which side the human takes.
+                  if (isVsComputer) ...[
+                    const SizedBox(height: 20),
+                    _buildSideSelector(accentCol, cardCol),
+                  ],
 
                   const SizedBox(height: 40),
 
@@ -152,8 +178,15 @@ class _NewGameScreenState extends State<NewGameScreen> {
                     height: 55,
                     child: ElevatedButton(
                       onPressed: () {
-                        // If computer, force a name for P2
-                        if (isVsComputer) p2Controller.text = "Computer (AI)";
+                        // The computer takes the side the human did not pick;
+                        // give that side its AI name before validating.
+                        if (isVsComputer) {
+                          if (humanPlaysWhite) {
+                            p2Controller.text = "Computer (AI)";
+                          } else {
+                            p1Controller.text = "Computer (AI)";
+                          }
+                        }
 
                         if (InputsValidations.checkInputs(
                           p1Controller.text,
@@ -165,6 +198,8 @@ class _NewGameScreenState extends State<NewGameScreen> {
                             isVsComputer,
                             selectedTime ?? 0,
                             selectedTime ?? 0,
+                            // When playing as black the computer is white.
+                            aiIsPlayerOne: isVsComputer && !humanPlaysWhite,
                           );
                           setState(() => isGoingToPlay = true);
                         } else {
@@ -265,6 +300,60 @@ class _NewGameScreenState extends State<NewGameScreen> {
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
             vertical: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSideSelector(Color accent, Color card) {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: card,
+        borderRadius: BorderRadius.circular(15),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _sideButton(
+              "You: White",
+              humanPlaysWhite,
+              accent,
+              () => setState(() => humanPlaysWhite = true),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _sideButton(
+              "You: Black",
+              !humanPlaysWhite,
+              accent,
+              () => setState(() => humanPlaysWhite = false),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sideButton(String title, bool isActive, Color accent, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isActive ? accent : Colors.transparent,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Center(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: isActive ? Colors.black : Colors.white54,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
       ),

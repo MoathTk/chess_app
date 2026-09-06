@@ -40,6 +40,24 @@ void main() {
     expect(game.playerTwo.remainingTime, 0);
   });
 
+  test('vs computer with the AI as white survives a reload', () async {
+    await ChessDb.deleteMyDatabase();
+
+    int gameID = await Game.addNewGame(
+      'Computer (AI)',
+      'Human',
+      true,
+      10,
+      10,
+      aiIsPlayerOne: true,
+    );
+    List<Game> games = await ChessDb.getAllUserGames();
+
+    Game game = games.firstWhere((g) => g.gameID == gameID);
+    expect(game.mode, 1);
+    expect(game.aiIsPlayerOne, true);
+  });
+
   test('time control persists in seconds and reloads', () async {
     await ChessDb.deleteMyDatabase();
 

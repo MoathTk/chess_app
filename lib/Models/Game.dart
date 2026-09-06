@@ -14,6 +14,7 @@ class Game {
     required this.playerTwoTitle,
     required this.chekcedKing,
     this.mode = 0,
+    this.aiIsPlayerOne = false,
     this.playerOneRemainingTime = 0,
     this.playerTowRemainingTime = 0,
     this.timeControlMinutes = 0,
@@ -28,6 +29,10 @@ class Game {
   int winner;
   int chekcedKing = 0;
   int mode = 0;
+
+  // True when the computer controls playerOne (white) instead of playerTwo.
+  // In a vs-computer game exactly one side is the AI; this flag picks which.
+  bool aiIsPlayerOne = false;
   int playerOneRemainingTime;
   int playerTowRemainingTime;
 
@@ -61,6 +66,7 @@ class Game {
       playerTwoTitle: playerTwoTitle,
       chekcedKing: chekcedKing,
       mode: mode,
+      aiIsPlayerOne: aiIsPlayerOne,
       timeControlMinutes: timeControlMinutes,
     );
   }
@@ -82,8 +88,9 @@ class Game {
     String player2Title,
     bool isVsComputer,
     int player1Time,
-    int player2Time,
-  ) async {
+    int player2Time, {
+    bool aiIsPlayerOne = false,
+  }) async {
     Player player1 = Player(
       id: 0,
       playerTitle: player1Title,
@@ -260,6 +267,7 @@ class Game {
       winner: -1,
       chekcedKing: 0,
       mode: isVsComputer ? 1 : 0,
+      aiIsPlayerOne: aiIsPlayerOne,
       timeControlMinutes: player1Time,
     );
 

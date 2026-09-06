@@ -54,6 +54,9 @@ class PieceCube extends ConsumerWidget {
           child: InkWell(
             onTap: () {
               if (gameOver) return;
+              // While the computer "thinks" (its delayed turn is in flight)
+              // ignore every tap so the human cannot play for the AI.
+              if (gameNotifier.aiThinking) return;
               if (soliderType != SoliderType.none &&
                   gameState.currentTurn == turn) {
                 if (gameState.currentTouchedIndex != pieceIndex) {

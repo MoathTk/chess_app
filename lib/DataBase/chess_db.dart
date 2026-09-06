@@ -259,7 +259,10 @@ class ChessDb {
             : gamePlayers[1].getAllCheckersSoldier().isNotEmpty
             ? 1
             : 0,
-        mode: games[index]['mode'],
+        // mode == 1 -> va-computer with AI as playerTwo;
+        // mode == 2 -> vs-computer with AI as playerOne.
+        mode: games[index]['mode'] == 2 ? 1 : (games[index]['mode'] ?? 0),
+        aiIsPlayerOne: games[index]['mode'] == 2,
         // Legacy rows store NULL here; treat as open/no timer (0).
         timeControlMinutes:
             int.tryParse(games[index]['timer']?.toString() ?? '') ?? 0,
@@ -542,7 +545,14 @@ class ChessDb {
     int gameID = await _database!.insert('Game', {
       'DateOfStart': DateTime.now().toIso8601String(),
       'winner': -1,
-      'mode': game.mode, //1 for ai, 0 for normal.
+      // mode encodes the match type AND which side the computer plays:
+      // 0 = human vs human, 1 = vs computer with the AI as playerTwo,
+      // 2 = vs computer with the AI as playerOne.
+      'mode': game.aiIsPlayerOne
+          ? 2
+          : game.mode == 1
+          ? 1
+          : 0,
       // Original time control in minutes (0 = open/no timer). Stored so a
       // rematch can reproduce the same time control.
       'timer': '${game.timeControlMinutes}',

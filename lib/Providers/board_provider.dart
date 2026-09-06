@@ -2,9 +2,11 @@ import 'package:chess_app_v1/Backend/kill_Logic.dart';
 import 'package:chess_app_v1/Models/board.dart';
 import 'package:chess_app_v1/DataBase/chess_db.dart' as db;
 import 'package:chess_app_v1/Backend/chess_clock.dart';
+import 'package:chess_app_v1/Backend/computer_logic.dart';
 import 'package:chess_app_v1/Backend/move_logic.dart';
 
 import 'package:chess_app_v1/Models/Game.dart';
+import 'package:chess_app_v1/Models/computer_turn.dart';
 
 import 'package:chess_app_v1/Models/player.dart';
 import 'package:chess_app_v1/Models/solider.dart';
@@ -61,6 +63,11 @@ class GameBoardState {
 class BoardNotifier extends StateNotifier<GameBoardState> {
   BoardNotifier(super.gameboard) {
     _initClock();
+    // If a resumed vs-computer game is already waiting on the AI's move,
+    // kick it off (e.g. a hot restart mid-game).
+    if (_isAiTurn) {
+      playComputerTurn();
+    }
   }
 
   // Per-player seconds-ticking chess clock. Null when neither player has a
@@ -71,6 +78,17 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
   // True when the current game was decided by a flag fall (timeout) rather
   // than checkmate. Read by the UI to label the victory dialog.
   bool timedOut = false;
+
+  // True while the computer is "thinking" (its delayed turn is in flight).
+  // The UI reads this to block the human from tapping during the AI's move.
+  bool aiThinking = false;
+
+  // Whether the computer controls playerOne. In a vs-computer game exactly one
+  // side is the AI; game.aiIsPlayerOne tells us which.
+  bool get _isAiTurn =>
+      (state.board.game.mode == 1) &&
+      !isGameOver &&
+      (_isP1Turn() == state.board.game.aiIsPlayerOne);
 
   bool _isP1Turn() => state.currentTurn == 0;
 
@@ -188,8 +206,63 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
       state.board.game.playerTwo.id,
       state.board.game.playerTwo.remainingTime,
     );
-    //must implement the computer moves logic.
-    //_AITurn();
+
+    // After the turn passes, if it is now the computer's turn, let it play
+    // (with a short delay so the human sees the move happen).
+    if (_isAiTurn) {
+      playComputerTurn();
+    }
+  }
+
+  // Picks and executes one random-but-legal move for the computer side, then
+  // auto-promotes any pawn the AI just advanced to the final rank. Runs after
+  // a short delay so the move is visible; reuses moveSolider/killSoldier so
+  // all DB, check/checkmate and clock handling applies to the AI identically.
+  Future<void> playComputerTurn() async {
+    if (!_isAiTurn) return;
+    if (aiThinking) return;
+    aiThinking = true;
+    state = state.copyWith(board: state.board);
+
+    await Future<void>.delayed(const Duration(milliseconds: 700));
+
+    // The game may have finished (e.g. the human resigned) during the delay.
+    if (!_isAiTurn) {
+      aiThinking = false;
+      return;
+    }
+
+    Player side = state.board.game.aiIsPlayerOne
+        ? state.board.game.playerOne
+        : state.board.game.playerTwo;
+    ComputerTurn? turn = ComputerLogic.determineAll(state.board, side);
+    if (turn == null) {
+      aiThinking = false;
+      return;
+    }
+
+    state = state.copyWith(
+      currentTouchedIndex: turn.currentSoldier.soliderposition,
+      placesToMove: turn.type ? [] : [turn.where],
+      placesToKill: turn.type ? [turn.where] : [],
+    );
+
+    if (turn.type) {
+      killSoldier(turn.where);
+    } else {
+      moveSolider(turn.where);
+    }
+
+    // Auto-promote only a pawn belonging to the AI side. The human's pending
+    // promotion (should one exist) is handled by their own dialog.
+    bool aiIsPlayerOne = side.id == state.board.game.playerOne.id;
+    int aiSideIndex = aiIsPlayerOne ? 1 : 2;
+    if (hasToPromotePawn() == aiSideIndex) {
+      await promotePawnInDatabase(SoliderType.queen);
+    }
+
+    aiThinking = false;
+    state = state.copyWith(currentTouchedIndex: -1, board: state.board);
   }
 
   static Future<bool> _moveSoldierInDataBase(Solider soldierToMove) async {
