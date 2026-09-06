@@ -489,8 +489,6 @@ class ChessDb {
 
     // 4. Delete the file
     await deleteDatabase(path);
-
-    print("Database deleted successfully.");
   }
 
   static Future<void> _createPlayerTable(Database db, int version) async {
