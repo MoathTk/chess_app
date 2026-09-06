@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:chess_app_v1/Validations/inputs_validations.dart';
 import 'package:chess_app_v1/Models/Game.dart';
 import 'package:chess_app_v1/Screens/loading_screen.dart';
+import 'package:chess_app_v1/Screens/board_ui.dart';
+import 'package:chess_app_v1/Screens/game_screen.dart'; // for the shared games list
+import 'package:chess_app_v1/DataBase/chess_db.dart';
 
 class NewGameScreen extends StatefulWidget {
   const NewGameScreen({super.key});
@@ -177,7 +180,7 @@ class _NewGameScreenState extends State<NewGameScreen> {
                     width: double.infinity,
                     height: 55,
                     child: ElevatedButton(
-                      onPressed: () {
+                      onPressed: () async {
                         // The computer takes the side the human did not pick;
                         // give that side its AI name before validating.
                         if (isVsComputer) {
@@ -192,7 +195,9 @@ class _NewGameScreenState extends State<NewGameScreen> {
                           p1Controller.text,
                           p2Controller.text,
                         )) {
-                          Game.addNewGame(
+                          setState(() => isGoingToPlay = true);
+
+                          int newGameID = await Game.addNewGame(
                             p1Controller.text,
                             p2Controller.text,
                             isVsComputer,
@@ -201,7 +206,34 @@ class _NewGameScreenState extends State<NewGameScreen> {
                             // When playing as black the computer is white.
                             aiIsPlayerOne: isVsComputer && !humanPlaysWhite,
                           );
-                          setState(() => isGoingToPlay = true);
+
+                          // Show the loading screen briefly so the user sees the
+                          // match being prepared, then open the created game.
+                          await Future<void>.delayed(
+                            const Duration(seconds: 1),
+                          );
+
+                          if (!mounted) return;
+                          final List<Game> allGames =
+                              await ChessDb.getAllUserGames();
+                          if (!mounted) return;
+                          // Refresh the shared games list so the board provider
+                          // can resolve the freshly-created game by ID.
+                          games
+                            ..clear()
+                            ..addAll(allGames);
+                          final Game newGame = allGames.firstWhere(
+                            (g) => g.gameID == newGameID,
+                          );
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (context) => GameBoard(
+                                player1Name: newGame.playerOneTitle,
+                                player2Name: newGame.playerTwoTitle,
+                                currentGame: newGame,
+                              ),
+                            ),
+                          );
                         } else {
                           showNotAddedGameBanner(context);
                         }
