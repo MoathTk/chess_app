@@ -82,18 +82,6 @@ class ChessDb {
     return set > 0;
   }
 
-  static Future<void> _saveAllPlayerSoldiers(Player player) async {
-    _database ??= await getInctence();
-    for (int i = 0; i < player.pawns.length; i++) {
-      await _database!.update(
-        'Soldier',
-        {'Position': player.pawns[i].soliderposition},
-        where: 'ID = ? AND PlayerID = ?',
-        whereArgs: [player.pawns[i].soliderID, player.id],
-      );
-    }
-  }
-
   static int _getSoldierTypeNumber(SoliderType solderType) {
     int type = 3;
     if (solderType == SoliderType.queen) {

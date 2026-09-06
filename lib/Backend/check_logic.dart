@@ -7,24 +7,6 @@ import 'package:chess_app_v1/Models/solider.dart';
 import 'package:chess_app_v1/Models/player.dart';
 
 class CheckLogic {
-  static int isAnyKingChecked(Board gameBoard, int currentTouchedIndex) {
-    int currentChecked = gameBoard.game.chekcedKing;
-
-    if (PositionsValidations.validSoldierPosiiton(currentTouchedIndex)) {
-      int playerID = gameBoard
-          .getChessBoardList()[currentTouchedIndex]
-          .playerID;
-      if (currentChecked == 1 && (playerID == gameBoard.game.playerOne.id)) {
-        return currentChecked;
-      }
-      if ((currentChecked == 2) && (playerID == gameBoard.game.playerTwo.id)) {
-        return currentChecked;
-      }
-    }
-
-    return 0;
-  }
-
   static Solider getSoldierByID(int soldierID, int playerID, Board board) {
     Solider solider = board.getChessBoardList().firstWhere(
       (sold) => sold.soliderID == soldierID && sold.playerID == playerID,
@@ -209,42 +191,6 @@ class CheckLogic {
     bool checkmate = !canPreventByMove && !canPreventByKill;
 
     return checkmate;
-  }
-
-  static bool cantkingMoveOrKill(Solider king, bool turn, Board board) {
-    bool cant = false;
-    List<int> howManyCan = [];
-    List<int> moves = MoveLogic.getAllSoldierMoves(
-      king.soliderposition,
-      SoliderType.king,
-      board,
-      turn,
-      king.firstMove,
-    );
-    List<int> kills = KillLogic.getAllSoldierKillPostions(
-      king.soliderposition,
-      SoliderType.king,
-      board,
-      turn,
-    );
-    List<Solider> allKingDefenders = board.game.playerOne.id == king.playerID
-        ? board.game.playerOne.getAllSoldiers()
-        : board.game.playerTwo.getAllSoldiers();
-
-    for (int i = 0; i < allKingDefenders.length; i++) {
-      int position = allKingDefenders[i].soliderposition;
-      SoliderType type = allKingDefenders[i].soliderType;
-      bool isfirstmove = allKingDefenders[i].firstMove;
-      List<int> moves = MoveLogic.getAllSoldierMoves(
-        position,
-        type,
-        board,
-        turn,
-        isfirstmove,
-      );
-      for (int j = 0; j < 20; j++) {}
-    }
-    return cant;
   }
 
   static bool canAnySoldierPrventkillByKill(bool turn, Board board) {
