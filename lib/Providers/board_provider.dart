@@ -1,13 +1,17 @@
 import 'package:chess_app_v1/Backend/kill_Logic.dart';
 import 'package:chess_app_v1/Models/board.dart';
 import 'package:chess_app_v1/DataBase/chess_db.dart' as db;
+import 'package:chess_app_v1/Backend/chess_clock.dart';
 import 'package:chess_app_v1/Backend/move_logic.dart';
 
 import 'package:chess_app_v1/Models/Game.dart';
 
+import 'package:chess_app_v1/Models/player.dart';
 import 'package:chess_app_v1/Models/solider.dart';
 
 import 'package:chess_app_v1/Screens/game_screen.dart';
+
+import 'dart:async';
 
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:chess_app_v1/Backend/check_logic.dart';
@@ -55,16 +59,99 @@ class GameBoardState {
 }
 
 class BoardNotifier extends StateNotifier<GameBoardState> {
-  BoardNotifier(super.gameboard);
+  BoardNotifier(super.gameboard) {
+    _initClock();
+  }
+
+  // Per-player seconds-ticking chess clock. Null when neither player has a
+  // time control (legacy games), in which case no timer ever runs.
+  ChessClock? _clock;
+  Timer? _clockTimer;
+
+  // True when the current game was decided by a flag fall (timeout) rather
+  // than checkmate. Read by the UI to label the victory dialog.
+  bool timedOut = false;
 
   bool _isP1Turn() => state.currentTurn == 0;
+
+  void _initClock() {
+    _clock = ChessClock(
+      playerOneTime: state.board.game.playerOne.remainingTime,
+      playerTwoTime: state.board.game.playerTwo.remainingTime,
+    );
+    if (!isGameOver && (_clock?.isRunning ?? false)) {
+      _startClock();
+    }
+  }
+
+  void _startClock() {
+    _clockTimer ??= Timer.periodic(
+      const Duration(seconds: 1),
+      (_) => _tick(),
+    );
+  }
+
+  void _stopClock() {
+    _clockTimer?.cancel();
+    _clockTimer = null;
+  }
+
+  @override
+  void dispose() {
+    _stopClock();
+    super.dispose();
+  }
+
+  // Writes the authoritative clock seconds back into the Player objects so
+  // the UI and the database reads always mirror the running clock.
+  void _syncClockToPlayers() {
+    final ChessClock? clock = _clock;
+    if (clock == null) return;
+    state.board.game.playerOne.remainingTime = clock.playerOneTime;
+    state.board.game.playerTwo.remainingTime = clock.playerTwoTime;
+  }
+
+  void _tick() {
+    // Once a winner is decided (checkmate or timeout) the clocks freeze.
+    if (isGameOver) {
+      _stopClock();
+      return;
+    }
+    final int winner = _clock?.tick(_isP1Turn()) ?? -1;
+    _syncClockToPlayers();
+    if (winner == 0 || winner == 1) {
+      _onTimeout(winner);
+      return;
+    }
+    // Persist the active player's clock every second so a hot restart resumes
+    // at the exact remaining time; the idle player's time only changes at a
+    // move boundary, where it is already saved in changeCurrentTurn.
+    final Player active = _isP1Turn()
+        ? state.board.game.playerOne
+        : state.board.game.playerTwo;
+    db.ChessDb.updateRemainingTime(active.id, active.remainingTime);
+    state = state.copyWith(board: state.board);
+  }
+
+  void _onTimeout(int winner) {
+    timedOut = true;
+    _stopClock();
+    state.board.game.winner = winner;
+    state = state.copyWith(board: state.board);
+
+    // The player whose clock hit zero loses; persist zero for them and the
+    // result for the game so the finish survives a restart.
+    final int loserID = winner == 0
+        ? state.board.game.playerTwo.id
+        : state.board.game.playerOne.id;
+    db.ChessDb.setGameWinner(state.board.game.gameID, winner);
+    db.ChessDb.updateRemainingTime(loserID, 0);
+  }
 
   // The game is over as soon as a winner is decided: winner == 0 means
   // playerOne (white) won, winner == 1 means playerTwo (black) won.
   bool get isGameOver =>
       state.board.game.winner == 0 || state.board.game.winner == 1;
-
-  int _opponentKing() => _isP1Turn() ? 2 : 1;
 
   int hasToPromotePawn() {
     Game currentGame = state.board.game;
@@ -77,6 +164,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
   }
 
   void changeCurrentTurn() {
+    _syncClockToPlayers();
     int newTurn = state.currentTurn == 0 ? 1 : 0;
 
     state.board.game.playerTwo.turn = newTurn == 1;
@@ -88,6 +176,17 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
       newTurn,
       state.board.game.playerOne.id,
       state.board.game.playerTwo.id,
+    );
+    // Persist both clocks here so a restart from a move boundary (or a clock
+    // that fired concurrently with this move) resumes correctly. The active
+    // clock is additionally saved every second in _tick.
+    db.ChessDb.updateRemainingTime(
+      state.board.game.playerOne.id,
+      state.board.game.playerOne.remainingTime,
+    );
+    db.ChessDb.updateRemainingTime(
+      state.board.game.playerTwo.id,
+      state.board.game.playerTwo.remainingTime,
     );
     //must implement the computer moves logic.
     //_AITurn();
@@ -199,6 +298,7 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
               typeToPromote;
           board.game.playerOne.promotable = -1;
           board.game.playerTwo.promotable = -1;
+          board = await _resolveCheckState(board, _isP1Turn());
           state = state.copyWith(board: board);
         }
       }
@@ -278,48 +378,78 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
     return board;
   }
 
+  // After the moving side completes a move, (re)evaluate whether its pieces
+  // give check. Scanning the whole side (not just the moved piece) is what
+  // makes discovered checks and promotion mates produce a winner: when the
+  // mover opens a line or is promoted into a queen/bishop, the piece actually
+  // attacking the king is NOT the same one that the move validation saw.
   Future<Board> _resolveCheckState(
     Board updatedBoard,
-    Solider mover,
     bool currentTurn,
   ) async {
-    int checked = CheckLogic.isSoldierMayAttacksKings(
-      mover.soliderposition,
-      updatedBoard,
-      _opponentKing(),
-    );
-    updatedBoard.game.checkKing(checked);
+    Player moverSide = currentTurn
+        ? updatedBoard.game.playerOne
+        : updatedBoard.game.playerTwo;
+    int targetKing = currentTurn ? 2 : 1;
 
-    if (checked == 1 || checked == 2) {
-      // Mark the piece that just delivered the check as a "checker" BEFORE
-      // evaluating mate, because checkmate detection relies on the opponent's
-      // checker list being accurate.
-      updatedBoard.getChessBoardList()[mover.soliderposition].checker = true;
-      if (CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
-        // The player who just moved delivered the checkmate, so they win.
-        // winner 0 = playerOne (white), winner 1 = playerTwo (black).
-        updatedBoard.game.winner = currentTurn ? 0 : 1;
-        // Persist the result so the game stays finished after a restart.
-        await db.ChessDb.setGameWinner(
-          updatedBoard.game.gameID,
-          updatedBoard.game.winner,
-        );
+    List<Solider> sidePieces = moverSide.getPlayerSoldiers();
+    int anyCheckedKing = 0;
+
+    for (int i = 0; i < sidePieces.length; i++) {
+      Solider piece = sidePieces[i];
+      if (!PositionsValidations.validSoldierPosiiton(
+        piece.soliderposition,
+      )) {
+        continue;
       }
-      bool setted = await _setSoldierAsCheckerInDB(
-        mover.soliderID,
-        mover.playerID,
+      int checking = CheckLogic.isSoldierMayAttacksKings(
+        piece.soliderposition,
+        updatedBoard,
+        targetKing,
       );
-      if (setted) {
-        updatedBoard.getChessBoardList()[mover.soliderposition].checker = true;
+      bool givesCheck = checking != 0;
+      if (givesCheck) {
+        anyCheckedKing = checking;
       }
-    } else {
-      bool unSetted = await _unSetSoldierAsCheckerInDB(
-        mover.soliderID,
-        mover.playerID,
+      // Keep the checker flags in sync (memory + DB) so checkmate evaluation
+      // and the escape filtering see exactly the pieces covering the king.
+      if (givesCheck != piece.checker) {
+        if (givesCheck) {
+          bool setted = await _setSoldierAsCheckerInDB(
+            piece.soliderID,
+            piece.playerID,
+          );
+          if (setted) {
+            updatedBoard
+                .getChessBoardList()[piece.soliderposition]
+                .checker = true;
+          }
+        } else {
+          bool unSetted = await _unSetSoldierAsCheckerInDB(
+            piece.soliderID,
+            piece.playerID,
+          );
+          if (unSetted) {
+            updatedBoard
+                .getChessBoardList()[piece.soliderposition]
+                .checker = false;
+          }
+        }
+      }
+    }
+
+    updatedBoard.game.checkKing(anyCheckedKing);
+
+    if (anyCheckedKing != 0 &&
+        CheckLogic.checkMate(!currentTurn, updatedBoard.clone())) {
+      // The player who just moved delivered the checkmate, so they win.
+      // winner 0 = playerOne (white), winner 1 = playerTwo (black).
+      updatedBoard.game.winner = currentTurn ? 0 : 1;
+      // Persist the result so the game stays finished after a restart.
+      await db.ChessDb.setGameWinner(
+        updatedBoard.game.gameID,
+        updatedBoard.game.winner,
       );
-      if (unSetted) {
-        updatedBoard.getChessBoardList()[mover.soliderposition].checker = false;
-      }
     }
 
     return updatedBoard;
@@ -405,7 +535,6 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
             //await AudioService.playRingBell();
             updatedBoard = await _resolveCheckState(
               updatedBoard,
-              movedSoldier,
               currentTurn,
             );
             state = state.copyWith(board: updatedBoard);
@@ -485,7 +614,6 @@ class BoardNotifier extends StateNotifier<GameBoardState> {
 
             updatedBoard = await _resolveCheckState(
               updatedBoard,
-              killerSolider,
               currentTurn,
             );
             state = state.copyWith(board: updatedBoard);

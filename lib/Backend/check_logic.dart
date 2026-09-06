@@ -49,52 +49,28 @@ class CheckLogic {
       return preventerMoves;
     }
     List<int> legalMoves = [];
+    Solider preventer = getSoldierByID(
+      preventerID,
+      preventerPlayerID,
+      gameBoard,
+    );
 
-    for (int i = 0; i < checkersID.length; i++) {
-      Solider solider = getSoldierByID(
-        checkersID[i],
-        killerPlayerID,
-        gameBoard,
-      );
-      if (solider.soliderID > -1) {
-        List<int> killerSpots = [];
-        Solider preventer = getSoldierByID(
-          preventerID,
-          preventerPlayerID,
-          gameBoard,
-        );
-        for (int j = 0; j < preventerMoves.length; j++) {
-          Board virturalGameBoard = gameBoard.clone();
-
-          virturalGameBoard = MoveLogic.move(
-            virturalGameBoard,
-            preventerMoves[j],
+    for (int j = 0; j < preventerMoves.length; j++) {
+      // A move only resolves the check if, after simulating it, NO enemy piece
+      // attacks the moving side's king. Checking every enemy piece (rather
+      // than only the listed checkers) is what catches pinned defenders,
+      // discovered checks and blocked-in kings.
+      List<int> attackersAfterMove =
+          _getAllPossibleAttackersAfterLeavingPosition(
             preventer.soliderposition,
+            preventerMoves[j],
+            preventerPlayerID,
             turn,
-          );
-          if (preventer.soliderType == SoliderType.king) {
-            virturalGameBoard.editKingPosition(preventerMoves[j], turn);
-          }
-
-          bool solverTurn = solider.playerID == gameBoard.game.playerOne.id;
-
-          killerSpots = KillLogic.getAllSoldierKillPostions(
-            solider.soliderposition,
-            solider.soliderType,
-            virturalGameBoard,
-            solverTurn,
+            gameBoard,
           );
 
-          if (turn) {
-            if (!killerSpots.contains(virturalGameBoard.player1KingPosition)) {
-              legalMoves.add(preventerMoves[j]);
-            }
-          } else {
-            if (!killerSpots.contains(virturalGameBoard.player2kingPosition)) {
-              legalMoves.add(preventerMoves[j]);
-            }
-          }
-        }
+      if (attackersAfterMove.isEmpty) {
+        legalMoves.add(preventerMoves[j]);
       }
     }
 
@@ -159,54 +135,28 @@ class CheckLogic {
       return preventerKills;
     }
     List<int> legalKills = [];
-    // Board virturalGameBoard = gameBoard.clone();
+    Solider preventer = getSoldierByID(
+      preventerID,
+      preventerPlayerID,
+      gameBoard,
+    );
 
-    for (int i = 0; i < checkersID.length; i++) {
-      Solider solider = getSoldierByID(
-        checkersID[i],
-        killerPlayerID,
-        gameBoard,
-      );
-      if (solider.soliderID > -1) {
-        List<int> killerSpots = [];
-        Solider preventer = getSoldierByID(
-          preventerID,
-          preventerPlayerID,
-          gameBoard,
-        );
-        for (int j = 0; j < preventerKills.length; j++) {
-          Board virturalGameBoard = gameBoard.clone();
-
-          virturalGameBoard = KillLogic.killSoldier(
+    for (int j = 0; j < preventerKills.length; j++) {
+      // Same principle as the moves filter: after simulating the capture no
+      // enemy piece may attack the moving side's king. This rejects capturing
+      // a checking piece that is defended by another piece, plus pins and
+      // discovered checks that a checker-only scan would miss.
+      List<int> attackersAfterKill =
+          _getAllPossibleAttackersAfterKillingAPosition(
             preventer.soliderposition,
-            virturalGameBoard,
-
-            turn,
             preventerKills[j],
-          );
-          if (preventer.soliderType == SoliderType.king) {
-            virturalGameBoard.editKingPosition(preventerKills[j], turn);
-          }
-
-          bool solverTurn = solider.playerID == gameBoard.game.playerOne.id;
-
-          killerSpots = KillLogic.getAllSoldierKillPostions(
-            solider.soliderposition,
-            solider.soliderType,
-            virturalGameBoard,
-            solverTurn,
+            preventerPlayerID,
+            turn,
+            gameBoard,
           );
 
-          if (turn) {
-            if (!killerSpots.contains(virturalGameBoard.player1KingPosition)) {
-              legalKills.add(preventerKills[j]);
-            }
-          } else {
-            if (!killerSpots.contains(virturalGameBoard.player2kingPosition)) {
-              legalKills.add(preventerKills[j]);
-            }
-          }
-        }
+      if (attackersAfterKill.isEmpty) {
+        legalKills.add(preventerKills[j]);
       }
     }
 

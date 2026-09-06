@@ -214,6 +214,23 @@ class ChessDb {
     return changed > 0;
   }
 
+  // Persists a player's remaining clock time (in seconds) so a game can be
+  // resumed with the correct clock after a restart. A value of 0 means the
+  // player has no clock (legacy/unlimited games never run a timer).
+  static Future<void> updateRemainingTime(
+    int playerID,
+    int remainingSeconds,
+  ) async {
+    if (playerID < 0) return;
+    _database ??= await getInctence();
+    await _database!.update(
+      'Player',
+      {'RemainingTime': remainingSeconds},
+      where: 'ID = ? ',
+      whereArgs: [playerID],
+    );
+  }
+
   static Future<List<Game>> getAllUserGames() async {
     _database ??= await initDB("chess.db");
 
@@ -243,6 +260,9 @@ class ChessDb {
             ? 1
             : 0,
         mode: games[index]['mode'],
+        // Legacy rows store NULL here; treat as open/no timer (0).
+        timeControlMinutes:
+            int.tryParse(games[index]['timer']?.toString() ?? '') ?? 0,
       );
     });
     List<Game?> allGames = await Future.wait(avGames);
@@ -286,7 +306,9 @@ class ChessDb {
             horses: allKinghts,
             bishops: allbishops,
             promotable: players[i]['Promotable'],
-            remainingTime: 0,
+            // Legacy games created before the clock feature store NULL here,
+            // which we treat as "no timer" (0). New games persist the seconds.
+            remainingTime: players[i]['RemainingTime'] ?? 0,
           ),
         );
       }
@@ -461,13 +483,20 @@ class ChessDb {
   }
 
   static Future<void> deleteMyDatabase() async {
-    // 1. Get the path to the database directory
+    // 1. Close and drop any cached connection first, otherwise deleteDatabase
+    //    cannot remove the file and later operations reuse a stale handle.
+    if (_database != null) {
+      await _database!.close();
+      _database = null;
+    }
+
+    // 2. Get the path to the database directory
     String databasesPath = await getDatabasesPath();
 
-    // 2. Combine it with your database name
+    // 3. Combine it with your database name
     String path = join(databasesPath, "chess.db");
 
-    // 3. Delete the file
+    // 4. Delete the file
     await deleteDatabase(path);
 
     print("Database deleted successfully.");
@@ -514,6 +543,9 @@ class ChessDb {
       'DateOfStart': DateTime.now().toIso8601String(),
       'winner': -1,
       'mode': game.mode, //1 for ai, 0 for normal.
+      // Original time control in minutes (0 = open/no timer). Stored so a
+      // rematch can reproduce the same time control.
+      'timer': '${game.timeControlMinutes}',
     });
     await _addNewPlayer(game.playerOne, gameID);
     await _addNewPlayer(game.playerTwo, gameID);
@@ -530,6 +562,7 @@ class ChessDb {
       'Color': player.color == ColorType.white ? 1 : 0, // Convert Color to int
       'Turn': player.turn ? 1 : 0, // Convert bool to int
       'Promotable': -1,
+      'RemainingTime': player.remainingTime,
     });
 
     bool isWhite = (player.color == ColorType.white);

@@ -1,4 +1,5 @@
 import 'package:chess_app_v1/Providers/board_provider.dart';
+import 'package:chess_app_v1/Backend/chess_clock.dart';
 import 'package:chess_app_v1/Screens/promotion_screen.dart';
 import 'package:chess_app_v1/DataBase/chess_db.dart' as db;
 import 'package:chess_app_v1/Screens/game_screen.dart'; // for the shared games list
@@ -36,7 +37,8 @@ class _GameBoardState extends ConsumerState<GameBoard> {
   int _announcedWinner = -1;
 
   // ✅ EDITION: Moved triggerGameOver out of the build method to the class scope
-  void triggerGameOver(String winnerName, bool isWhiteWinner) {
+  void triggerGameOver(String winnerName, bool isWhiteWinner,
+      {String resultLabel = "CHECKMATE"}) {
     showDialog(
       context: context,
       barrierDismissible: false, // User must choose an option
@@ -44,6 +46,7 @@ class _GameBoardState extends ConsumerState<GameBoard> {
         return WinnerDialog(
           winnerName: winnerName,
           isWhiteWinner: isWhiteWinner,
+          resultLabel: resultLabel,
           onRematch: () {
             // Close the dialog, then start a fresh game with the same players.
             Navigator.of(dialogContext).pop();
@@ -66,8 +69,8 @@ class _GameBoardState extends ConsumerState<GameBoard> {
       widget.player1Name,
       widget.player2Name,
       widget.currentGame.mode == 1,
-      10,
-      10,
+      widget.currentGame.timeControlMinutes,
+      widget.currentGame.timeControlMinutes,
     );
 
     // Keep the shared games list in sync so the new game can be opened.
@@ -113,7 +116,11 @@ class _GameBoardState extends ConsumerState<GameBoard> {
             ? widget.player1Name
             : widget.player2Name;
 
-        triggerGameOver(winnerName, isWhiteWinner);
+        triggerGameOver(
+          winnerName,
+          isWhiteWinner,
+          resultLabel: gameBoard.timedOut ? "WON ON TIME" : "CHECKMATE",
+        );
       }
     });
 
@@ -170,6 +177,8 @@ class _GameBoardState extends ConsumerState<GameBoard> {
                       avatarColor: Colors.orangeAccent,
                       isOpponent: true,
                       isActiveTurn: isPlayer1Turn,
+                      timeLeft:
+                          gameState.board.game.playerOne.remainingTime,
                     ),
                     const SizedBox(height: 20),
                     AspectRatio(
@@ -220,6 +229,8 @@ class _GameBoardState extends ConsumerState<GameBoard> {
                       avatarColor: Colors.blueAccent,
                       isOpponent: false,
                       isActiveTurn: isPlayer2Turn,
+                      timeLeft:
+                          gameState.board.game.playerTwo.remainingTime,
                     ),
                     KilledPieceWidget(
                       playerID: gameState.board.game.playerTwo.id,
@@ -250,6 +261,8 @@ class _GameBoardState extends ConsumerState<GameBoard> {
                           avatarColor: Colors.orangeAccent,
                           isOpponent: true,
                           isActiveTurn: isPlayer1Turn,
+                          timeLeft:
+                              gameState.board.game.playerOne.remainingTime,
                         ),
                         const SizedBox(height: 20),
                         AspectRatio(
@@ -306,6 +319,8 @@ class _GameBoardState extends ConsumerState<GameBoard> {
                           avatarColor: Colors.blueAccent,
                           isOpponent: false,
                           isActiveTurn: isPlayer2Turn,
+                          timeLeft:
+                              gameState.board.game.playerTwo.remainingTime,
                         ),
                         KilledPieceWidget(
                           playerID: gameState.board.game.playerTwo.id,
@@ -334,6 +349,7 @@ Widget _buildPlayerInfo({
   required Color avatarColor,
   required bool isOpponent,
   required bool isActiveTurn,
+  required int timeLeft,
 }) {
   return Row(
     mainAxisAlignment: isOpponent
@@ -374,16 +390,25 @@ Widget _buildPlayerInfo({
             ],
           ),
           const SizedBox(height: 4),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.white10,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: Text(
-              "Rating: $rating",
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  "Rating: $rating",
+                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ),
+              if (timeLeft > 0) ...[
+                const SizedBox(width: 8),
+                _buildClock(timeLeft),
+              ],
+            ],
           ),
         ],
       ),
@@ -393,6 +418,42 @@ Widget _buildPlayerInfo({
         _buildAvatar(avatarColor, isActiveTurn),
       ],
     ],
+  );
+}
+
+// Renders the player's countdown clock ("mm:ss"). Turns red when the player
+// is low on time (<= 30s) so it reads as urgent, chess.com style.
+Widget _buildClock(int seconds) {
+  final bool low = ChessClock.isLowTime(seconds);
+  final Color color = low ? Colors.redAccent : Colors.white;
+
+  return AnimatedContainer(
+    duration: const Duration(milliseconds: 300),
+    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+    decoration: BoxDecoration(
+      color: low ? Colors.redAccent.withValues(alpha: 0.15) : Colors.white10,
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: color.withValues(alpha: 0.6)),
+      boxShadow: low
+          ? [
+              BoxShadow(
+                color: Colors.redAccent.withValues(alpha: 0.3),
+                blurRadius: 8,
+                spreadRadius: 1,
+              ),
+            ]
+          : null,
+    ),
+    child: Text(
+      ChessClock.formatTime(seconds),
+      style: TextStyle(
+        color: color,
+        fontSize: 18,
+        fontWeight: FontWeight.w800,
+        fontFeatures: const [FontFeature.tabularFigures()],
+        letterSpacing: 1,
+      ),
+    ),
   );
 }
 

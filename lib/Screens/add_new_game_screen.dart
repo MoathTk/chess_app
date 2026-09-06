@@ -14,7 +14,8 @@ class _NewGameScreenState extends State<NewGameScreen> {
   final TextEditingController p1Controller = TextEditingController();
   final TextEditingController p2Controller = TextEditingController();
 
-  int selectedTime = 10;
+  // Time control in minutes. null = open game with no clock.
+  int? selectedTime = 10;
   bool isGoingToPlay = false;
 
   // NEW STATE: track the game mode
@@ -137,6 +138,8 @@ class _NewGameScreenState extends State<NewGameScreen> {
                         _buildTimeOption(10, "Rapid", selectedTime == 10),
                         const SizedBox(width: 10),
                         _buildTimeOption(30, "Classic", selectedTime == 30),
+                        const SizedBox(width: 10),
+                        _buildOpenTimeOption(selectedTime == null),
                       ],
                     ),
                   ),
@@ -160,8 +163,8 @@ class _NewGameScreenState extends State<NewGameScreen> {
                             p1Controller.text,
                             p2Controller.text,
                             isVsComputer,
-                            selectedTime,
-                            selectedTime,
+                            selectedTime ?? 0,
+                            selectedTime ?? 0,
                           );
                           setState(() => isGoingToPlay = true);
                         } else {
@@ -291,6 +294,41 @@ class _NewGameScreenState extends State<NewGameScreen> {
             ),
             Text(
               label,
+              style: TextStyle(
+                color: isSelected ? Colors.black54 : Colors.grey,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // "Open" time control: no clock, the game can last indefinitely.
+  Widget _buildOpenTimeOption(bool isSelected) {
+    return GestureDetector(
+      onTap: () => setState(() => selectedTime = null),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 100,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.white : const Color(0xFF2C2C2C),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            Text(
+              "∞",
+              style: TextStyle(
+                color: isSelected ? Colors.black : Colors.white,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Text(
+              "Open",
               style: TextStyle(
                 color: isSelected ? Colors.black54 : Colors.grey,
                 fontSize: 12,

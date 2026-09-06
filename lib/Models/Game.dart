@@ -16,6 +16,7 @@ class Game {
     this.mode = 0,
     this.playerOneRemainingTime = 0,
     this.playerTowRemainingTime = 0,
+    this.timeControlMinutes = 0,
   });
 
   final int gameID;
@@ -29,6 +30,11 @@ class Game {
   int mode = 0;
   int playerOneRemainingTime;
   int playerTowRemainingTime;
+
+  // Original time control in minutes per side (0 = open/no timer). Persisted
+  // so a rematch can reproduce the same time control.
+  int timeControlMinutes;
+
   static Game getEmptyInstance() {
     return Game(
       gameID: -1,
@@ -40,6 +46,7 @@ class Game {
       playerTwoTitle: '',
       chekcedKing: 0,
       mode: 0,
+      timeControlMinutes: 0,
     );
   }
 
@@ -54,6 +61,7 @@ class Game {
       playerTwoTitle: playerTwoTitle,
       chekcedKing: chekcedKing,
       mode: mode,
+      timeControlMinutes: timeControlMinutes,
     );
   }
 
@@ -156,7 +164,7 @@ class Game {
           firstMove: false,
         ),
       ],
-      remainingTime: player1Time,
+      remainingTime: player1Time * 60,
     );
 
     Player player2 = Player(
@@ -239,7 +247,7 @@ class Game {
           firstMove: false,
         ),
       ],
-      remainingTime: player2Time,
+      remainingTime: player2Time * 60,
     );
 
     Game newGame = Game(
@@ -252,6 +260,7 @@ class Game {
       winner: -1,
       chekcedKing: 0,
       mode: isVsComputer ? 1 : 0,
+      timeControlMinutes: player1Time,
     );
 
     int newGameID = await ChessDb.addNewGame(newGame);

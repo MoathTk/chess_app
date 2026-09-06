@@ -7,6 +7,7 @@ class WinnerDialog extends StatelessWidget {
   final bool isWhiteWinner;
   final VoidCallback onRematch;
   final VoidCallback onHome;
+  final String resultLabel;
 
   const WinnerDialog({
     super.key,
@@ -14,6 +15,7 @@ class WinnerDialog extends StatelessWidget {
     required this.isWhiteWinner,
     required this.onRematch,
     required this.onHome,
+    this.resultLabel = "CHECKMATE",
   });
 
   @override
@@ -65,10 +67,10 @@ class WinnerDialog extends StatelessWidget {
               ),
               const SizedBox(height: 24),
 
-              // --- "CHECKMATE" Subtitle ---
-              const Text(
-                "CHECKMATE",
-                style: TextStyle(
+              // --- Subtitle (CHECKMATE / WON ON TIME) ---
+              Text(
+                resultLabel,
+                style: const TextStyle(
                   color: Colors.white54,
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
